@@ -31,19 +31,16 @@ export async function pickClip(source: 'library' | 'camera' = 'library'): Promis
   return asset ? { uri: asset.uri, durationMs: asset.duration ?? null } : null;
 }
 
-function waitUntilLoaded(player: VideoPlayer): Promise<void> {
-  if (player.status === 'readyToPlay') return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const subscription = player.addListener('statusChange', ({ status, error }) => {
-      if (status === 'readyToPlay') {
-        subscription.remove();
-        resolve();
-      } else if (status === 'error') {
-        subscription.remove();
-        reject(new Error(error?.message ?? 'Could not read the clip.'));
-      }
-    });
-  });
+const LOAD_TIMEOUT_MS = 15000;
+
+/** Resolves the clip length in ms once the player knows it, without needing a VideoView. */
+async function loadDurationMs(player: VideoPlayer): Promise<number> {
+  for (let waited = 0; waited < LOAD_TIMEOUT_MS; waited += 200) {
+    if (player.duration > 0) return player.duration * 1000;
+    if (player.status === 'error') throw new Error('Could not read the clip.');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error('Timed out reading the clip length.');
 }
 
 /** Evenly spaced timestamps in ms, centered in equal slices so the first and last frames avoid fades. */
@@ -55,8 +52,7 @@ export function frameTimestamps(durationMs: number, count = DEFAULT_FRAME_COUNT)
 export async function extractFrames(clip: PickedClip, count = DEFAULT_FRAME_COUNT): Promise<{ uri: string; timestampMs: number }[]> {
   const player = createVideoPlayer(clip.uri);
   try {
-    await waitUntilLoaded(player);
-    const durationMs = clip.durationMs ?? player.duration * 1000;
+    const durationMs = clip.durationMs ?? (await loadDurationMs(player));
     if (!durationMs) throw new Error('The clip has no length.');
     const timestamps = frameTimestamps(durationMs, count);
     const thumbnails = await player.generateThumbnailsAsync(timestamps.map((ms) => ms / 1000), { maxWidth: 1280, maxHeight: 1280 });
