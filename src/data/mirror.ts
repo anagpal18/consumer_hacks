@@ -1,31 +1,31 @@
 import { PRIVATE_CATEGORIES, type AvatarRef, type ClosetItem, type GarmentCategory, type MirrorProps } from '@shared/contract';
 
 /**
- * Local copy of the shape HEHE-13 is adding to shared/contract.ts (MirrorProps.garments)
- * and shared/renderAssets.ts (category to slot). Replace these with the shared imports
- * once that PR lands.
+ * Local copies of MirrorGarment (shared/contract.ts) and RenderSlot (shared/renderAssets.ts)
+ * from PR #4 (kenil/mirror-3d). Import those instead once it merges.
  */
-export type GarmentSlot = 'outerwear' | 'top' | 'bottom' | 'dress' | 'shoes' | 'accessory';
+export type RenderSlot = 'outerwear' | 'top' | 'bottom' | 'shoes';
 
 export type MirrorGarment = {
-  slot: GarmentSlot;
+  slot: string;
   renderAssetKey?: string;
   colorHex?: string;
   label: string;
 };
 
-const SLOT_BY_CATEGORY: Partial<Record<GarmentCategory, GarmentSlot>> = {
+const SLOT_BY_CATEGORY: Partial<Record<GarmentCategory, RenderSlot>> = {
   outerwear: 'outerwear',
   top: 'top',
   bottom: 'bottom',
-  dress: 'dress',
   shoes: 'shoes',
-  accessory: 'accessory',
 };
 
 export type OutfitMirrorProps = Pick<MirrorProps, 'avatar' | 'garmentAssetKeys'> & { garments: MirrorGarment[] };
 
-/** An outfit's closet items as Mirror props. Socks and underwear never reach the avatar. */
+/**
+ * An outfit's closet items as Mirror props. Socks and underwear never reach the avatar,
+ * and categories without a render slot (dress, accessory) are left off until one exists.
+ */
 export function outfitToMirrorProps(avatar: AvatarRef, items: ClosetItem[]): OutfitMirrorProps {
   const garments = items.flatMap((item): MirrorGarment[] => {
     const slot = SLOT_BY_CATEGORY[item.category];

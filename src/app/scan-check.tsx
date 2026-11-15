@@ -11,14 +11,16 @@ import {
   extractFrames,
   pickClip,
   scanClip,
+  useConfirmWear,
   useScan,
+  useTodaysLook,
   type PickedClip,
 } from '@/data';
 
 const SAMPLE_CLIP_URL = 'https://raw.githubusercontent.com/anagpal18/consumer_hacks/shresth-video/fixtures/closet-demo.mp4';
 
 /**
- * Integration check for the clip-to-frames path, opened with wearagain://scan-check
+ * Integration check for today's look, wear confirmation and the clip-to-frames path, opened with wearagain://scan-check
  * or wearagain://scan-check?clip=<video url> to run against a specific clip.
  * Not part of the product flow; Aditya's capture screen replaces it.
  */
@@ -28,6 +30,8 @@ export default function ScanCheckScreen() {
   const [scanId, setScanId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const scan = useScan(scanId);
+  const look = useTodaysLook('dinner with friends');
+  const { confirmWear, isSaving, lastResult, error: wearError } = useConfirmWear();
   const { clip: clipParam } = useLocalSearchParams<{ clip?: string }>();
   const clipUrl = clipParam || SAMPLE_CLIP_URL;
 
@@ -63,11 +67,33 @@ export default function ScanCheckScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: 'Scan check' }} />
+      <Stack.Screen options={{ title: 'Integration check' }} />
       <Text style={styles.mode}>
         Mode: {DATA_MODE}
         {IS_FIXTURE_MODE ? ` (${FIXTURE_LABEL})` : ''}
       </Text>
+      <Text style={styles.heading}>Today&apos;s look{look.isLoading ? ' (updating)' : ''}</Text>
+      {look.items.map((item) => (
+        <Text key={item.itemId} style={styles.log}>
+          {item.category}: {item.name} ({item.availability})
+        </Text>
+      ))}
+      {look.lockedUnavailableItemIds.length > 0 && <Text style={styles.log}>Locked item unavailable</Text>}
+      {look.error && <Text style={styles.log}>Stylist error: {look.error.message}</Text>}
+      <Pressable
+        disabled={isSaving || !look.outfit}
+        style={styles.button}
+        onPress={() => look.outfit && confirmWear({ itemIds: look.outfit.itemIds, outfitId: look.outfit.outfitId }).catch(() => {})}>
+        <Text style={styles.buttonText}>{isSaving ? 'Saving' : 'Wearing this'}</Text>
+      </Pressable>
+      {lastResult && (
+        <Text style={styles.log}>
+          Saved wear {lastResult.duplicate ? '(duplicate)' : ''}, streak {lastResult.streakDays ?? '?'} days, challenge{' '}
+          {lastResult.challenge.map((progress) => `${progress.distinctOutfits}/${progress.target}`).join(' ')}
+        </Text>
+      )}
+      {wearError && <Text style={styles.log}>Wear error: {wearError.message}</Text>}
+      <Text style={styles.heading}>Clip to frames</Text>
       <Pressable disabled={busy} style={styles.button} onPress={() => run(() => pickClip('library'))}>
         <Text style={styles.buttonText}>Pick a clip from Photos</Text>
       </Pressable>
@@ -100,6 +126,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.four, gap: Spacing.two },
   mode: { color: Colors.mock, fontSize: 13 },
+  heading: { color: Colors.ink, fontSize: 15, fontWeight: '600', marginTop: Spacing.two },
   button: { backgroundColor: Colors.accent, borderRadius: Radius.md, padding: Spacing.three, alignItems: 'center' },
   buttonText: { color: Colors.onAccent, fontWeight: '600' },
   log: { color: Colors.inkSoft, fontSize: 12 },
