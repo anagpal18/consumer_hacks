@@ -58,7 +58,9 @@ export default defineSchema({
     kind: v.union(v.literal("frame"), v.literal("clip"), v.literal("crop"), v.literal("photo")),
     contentType: v.optional(v.string()),
     size: v.optional(v.number()),
-  }).index("by_storageId", ["storageId"]),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_ownerId", ["ownerId"]),
 
   scans: defineTable({
     ownerId: v.id("profiles"),

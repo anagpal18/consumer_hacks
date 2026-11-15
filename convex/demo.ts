@@ -59,6 +59,19 @@ export const reset = mutation({
       await ctx.db.delete("outfits", row._id);
       deleted++;
     }
+    for await (const scan of ctx.db.query("scans").withIndex("by_ownerId", (q) => q.eq("ownerId", profile._id))) {
+      for await (const c of ctx.db.query("candidates").withIndex("by_scanId_and_attempt", (q) => q.eq("scanId", scan._id))) {
+        await ctx.db.delete("candidates", c._id);
+        deleted++;
+      }
+      await ctx.db.delete("scans", scan._id);
+      deleted++;
+    }
+    for await (const m of ctx.db.query("media").withIndex("by_ownerId", (q) => q.eq("ownerId", profile._id))) {
+      await ctx.storage.delete(m.storageId);
+      await ctx.db.delete("media", m._id);
+      deleted++;
+    }
     return { deleted };
   },
 });

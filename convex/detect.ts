@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import { dominantHex } from "./color";
+import { colorFamily } from "./renderAssets";
 import type { Category } from "./lib";
 import { extractFramesFromVideo } from "./video";
 
@@ -260,6 +261,20 @@ export const run = internalAction({
             : undefined,
           similarToIndexes,
         });
+      }
+      for (const a of candidates) {
+        for (const b of candidates) {
+          if (a.index >= b.index || a.category !== b.category || a.frameId === b.frameId) continue;
+          if (a.evidenceFrameIds.includes(b.frameId) || b.evidenceFrameIds.includes(a.frameId)) continue;
+          const family = colorFamily(a.colorHex);
+          if (!family || family !== colorFamily(b.colorHex)) continue;
+          for (const [x, y] of [[a, b], [b, a]] as const) {
+            if (x.similarToIndexes.includes(y.index)) continue;
+            x.similarToIndexes.push(y.index);
+            x.uncertain = true;
+            x.reviewReason ??= `Looks like another ${family} ${y.subtype}; keep both or merge.`;
+          }
+        }
       }
       await ctx.runMutation(internal.scans.saveCandidates, { scanId: args.scanId, attempt: args.attempt, model: config.model, candidates });
     } catch (e) {

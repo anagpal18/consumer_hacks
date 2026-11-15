@@ -110,8 +110,9 @@ describe("60-second stage flow", () => {
     const secondDevice = { closetCode: CLOSET };
     await t.mutation(api.closet.setStatus, { ...secondDevice, itemId: shoes, availability: "laundry" });
 
-    const recomputed = await t.action(api.stylist.suggest, { closetCode: CLOSET, prompt: "dinner", lockedItemIds: [jacket] });
+    const recomputed = await t.action(api.stylist.suggest, { closetCode: CLOSET, prompt: "dinner", lockedItemIds: [jacket], currentItemIds: look });
     const next = recomputed.outfits[0].itemIds as Id<"items">[];
+    expect(recomputed.outfits[0].swaps).toEqual([{ from: shoes, to: next.find((id) => !look.includes(id)) }]);
     expect(next).toContain(jacket);
     expect(next).not.toContain(shoes);
     expect(next.filter((id) => !look.includes(id))).toHaveLength(1);
