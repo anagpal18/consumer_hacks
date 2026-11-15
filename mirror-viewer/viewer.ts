@@ -176,6 +176,11 @@ function prepare(obj: THREE.Object3D) {
     if (ALPHA_CUTOUT.test(mat.name) || ALPHA_CUTOUT.test(mesh.name)) {
       mat.transparent = false;
       mat.alphaTest = /eyebrow/i.test(mat.name) ? 0.12 : 0.45;
+      if (/eyelash|eyebrow/i.test(mat.name)) {
+        // Lash and brow textures are white where transparent; mipmapped alpha would let that white cover the eyes.
+        mat.color.set(0x1a1410);
+        if (mat.map) mat.map.minFilter = THREE.LinearFilter;
+      }
       mat.depthWrite = true;
       mat.side = THREE.DoubleSide;
     } else if (!/skin|eye/i.test(mat.name)) {
