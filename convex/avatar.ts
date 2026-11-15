@@ -19,7 +19,7 @@ const MODEL_TIMEOUT_MS = 60_000;
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["usable", "reason", "sex", "build", "proportions", "skinBox", "confidence"],
+  required: ["usable", "reason", "sex", "build", "proportions", "faceBox", "confidence"],
   properties: {
     usable: { type: "boolean", description: "True only for a clear photo of one person showing most of the body, head to at least the knees." },
     reason: { type: "string", description: "Short reason when not usable or when confidence is low, else empty." },
@@ -32,11 +32,11 @@ const SCHEMA = {
       description: "Relative to an average adult of the same sex and height: -1 much smaller, 0 average, 1 much larger.",
       properties: Object.fromEntries(PROPORTIONS.map((k) => [k, { type: "number" }])),
     },
-    skinBox: {
+    faceBox: {
       type: "object",
       additionalProperties: false,
       required: ["found", "x", "y", "w", "h"],
-      description: "Small box fully inside visible skin (cheek, forehead or back of hand), as fractions 0-1 of the image; found false if no skin is visible.",
+      description: "Box around the whole face, hairline to chin and ear to ear, as fractions 0-1 of the image (x,y top-left); found false if no face is visible.",
       properties: { found: { type: "boolean" }, x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" } },
     },
     confidence: { type: "number", description: "0-1 confidence in the build and proportions." },
@@ -49,29 +49,45 @@ type ModelOut = {
   sex: AvatarSex;
   build: AvatarPreset;
   proportions: Proportions;
-  skinBox: { found: boolean; x: number; y: number; w: number; h: number };
+  faceBox: { found: boolean; x: number; y: number; w: number; h: number };
   confidence: number;
 };
 
 const clamp = (n: unknown, lo: number, hi: number) => Math.min(hi, Math.max(lo, typeof n === "number" && Number.isFinite(n) ? n : 0));
 const round = (n: number) => Math.round(n * 100) / 100;
 
-function medianHex(img: Awaited<ReturnType<typeof Jimp.read>>, box: ModelOut["skinBox"]) {
-  const x = Math.floor(clamp(box.x, 0, 1) * img.width);
-  const y = Math.floor(clamp(box.y, 0, 1) * img.height);
-  const w = Math.max(1, Math.min(img.width - x, Math.round(clamp(box.w, 0, 1) * img.width)));
-  const h = Math.max(1, Math.min(img.height - y, Math.round(clamp(box.h, 0, 1) * img.height)));
-  if (x >= img.width || y >= img.height) return null;
-  const { data, width } = img.bitmap;
-  const channels: number[][] = [[], [], []];
-  for (let yy = y; yy < y + h; yy++) {
-    for (let xx = x; xx < x + w; xx++) {
-      const i = (yy * width + xx) * 4;
-      for (let c = 0; c < 3; c++) channels[c].push(data[i + c]);
+const SKIN_SAMPLES = [
+  { x: 0.3, y: 0.12, w: 0.4, h: 0.16 },
+  { x: 0.14, y: 0.45, w: 0.2, h: 0.18 },
+  { x: 0.66, y: 0.45, w: 0.2, h: 0.18 },
+  { x: 0.4, y: 0.42, w: 0.2, h: 0.14 },
+];
+
+function skinToneFromFace(img: Awaited<ReturnType<typeof Jimp.read>>, face: ModelOut["faceBox"]) {
+  const fx = clamp(face.x, 0, 1);
+  const fy = clamp(face.y, 0, 1);
+  const fw = clamp(face.w, 0, 1 - fx);
+  const fh = clamp(face.h, 0, 1 - fy);
+  if (fw * img.width < 4 || fh * img.height < 4) return null;
+  const { data, width, height } = img.bitmap;
+  const all: number[][] = [];
+  for (const s of SKIN_SAMPLES) {
+    const x0 = Math.floor((fx + fw * s.x) * width);
+    const y0 = Math.floor((fy + fh * s.y) * height);
+    const x1 = Math.min(width, Math.ceil((fx + fw * (s.x + s.w)) * width));
+    const y1 = Math.min(height, Math.ceil((fy + fh * (s.y + s.h)) * height));
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * width + x) * 4;
+        all.push([data[i], data[i + 1], data[i + 2]]);
+      }
     }
   }
-  const med = (a: number[]) => a.sort((p, q) => p - q)[Math.floor(a.length / 2)];
-  return `#${channels.map((a) => med(a).toString(16).padStart(2, "0")).join("")}`;
+  if (!all.length) return null;
+  const skinLike = all.filter(([r, g, b]) => r > 60 && r >= g && g >= b * 0.85 && r - b > 10 && r - b < 140);
+  const px = skinLike.length >= Math.max(4, all.length * 0.15) ? skinLike : all;
+  const med = (c: number) => px.map((p) => p[c]).sort((p, q) => p - q)[Math.floor(px.length / 2)];
+  return `#${[0, 1, 2].map((c) => med(c).toString(16).padStart(2, "0")).join("")}`;
 }
 
 async function askModel(imageDataUrl: string, hints: string): Promise<ModelOut> {
@@ -163,7 +179,7 @@ export const estimateBody = action({
           result = fallback("Body estimate is unavailable right now; using the average preset.");
         } else {
           const sex: AvatarSex = args.sex ?? (AVATAR_SEXES.includes(out.sex) ? out.sex : "unspecified");
-          const skinTone = out.skinBox?.found ? medianHex(img, out.skinBox) : null;
+          const skinTone = out.faceBox?.found ? skinToneFromFace(img, out.faceBox) : null;
           if (!out.usable) {
             result = fallback(out.reason?.trim() || "Use a clear full-body photo to personalise the avatar.", sex, skinTone);
           } else {

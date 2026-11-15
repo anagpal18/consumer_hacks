@@ -15,7 +15,7 @@ const VALID = {
   sex: "male",
   build: "broad",
   proportions: { head: 0.1, chest: 0.4, arms: 0.2, waist: -0.1, hips: 0, shoulders: 0.5 },
-  skinBox: { found: true, x: 0.5, y: 0, w: 0.5, h: 0.5 },
+  faceBox: { found: true, x: 0.5, y: 0, w: 0.5, h: 0.5 },
   confidence: 0.8,
 };
 
@@ -72,7 +72,7 @@ describe("avatar:estimateBody", () => {
       ...VALID,
       build: "huge",
       proportions: { head: 5, chest: -9, arms: 1.5, waist: -1.2, hips: 0.333, shoulders: 0 },
-      skinBox: { found: true, x: -1, y: -1, w: 9, h: 0.5 },
+      faceBox: { found: true, x: -1, y: -1, w: 9, h: 0.5 },
       confidence: 3,
     });
     const t = convexTest(schema, modules);
