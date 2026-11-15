@@ -21,6 +21,7 @@ export default function ScanReviewScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -57,6 +58,19 @@ export default function ScanReviewScreen() {
     candidate.uncertain && !draft.keptBoth[candidate.candidateId] && !isMerged(candidate) && !draft.rejected[candidate.candidateId];
   const selected = job.candidates.filter(isSelected);
   const open = job.candidates.filter(needsLook).length;
+
+  async function deleteScan() {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.deleteScan({ closetCode: api.closetCode, scanId });
+      setSession({ activeScanId: null, scanDrafts: { ...scanDrafts, [scanId]: undefined as never } });
+      router.replace('/scan');
+    } catch {
+      setError('Could not delete this scan. Try again.');
+      setSaving(false);
+    }
+  }
 
   async function confirm() {
     setSaving(true);
@@ -190,6 +204,15 @@ export default function ScanReviewScreen() {
           disabled={saving || selected.length === 0}
           onPress={confirm}
         />
+        {confirmDelete ? (
+          <View style={styles.deleteRow}>
+            <Text style={styles.deleteText}>Delete this scan and its video frames? Nothing is added.</Text>
+            <Button label="Keep" compact variant="secondary" onPress={() => setConfirmDelete(false)} />
+            <Button label="Delete" compact testID="delete-scan-confirm" disabled={saving} onPress={deleteScan} />
+          </View>
+        ) : (
+          <Button label="Delete this scan" variant="ghost" compact icon="trash-outline" testID="delete-scan" disabled={saving} onPress={() => setConfirmDelete(true)} />
+        )}
       </View>
     </View>
   );
@@ -218,4 +241,6 @@ const styles = StyleSheet.create({
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   footer: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, gap: Spacing.two, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.line },
   error: { fontSize: 13, color: Colors.danger },
+  deleteRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  deleteText: { flex: 1, fontSize: 13, lineHeight: 18, color: Colors.inkSoft },
 });

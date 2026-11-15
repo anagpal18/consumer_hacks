@@ -20,6 +20,8 @@ Every screen calls `api` from `@/data/api` and nothing else. `api` is typed as `
 | `api.outfits.progress()` | `WearProgress` (UI-only type) | Profile |
 | `api.profile.get()`, `api.profile.save(patch)` | `AvatarProfile` (UI-only type) | Onboarding, Home, Profile |
 | `api.subscribe(listener)` | | `src/data/hooks.ts` refetches on every call of the listener |
+| `api.deleteScan({ closetCode, scanId })` | `DeleteScanArgs -> DeleteScanResult`, backed by `privacy:deleteScan` | Review, **Delete this scan** (asks once, then returns to `/scan`) |
+| `api.closetCode` | string | The real adapter sets it from `process.env.EXPO_PUBLIC_CLOSET_CODE` and adds it to every Convex call. The mock uses an obviously fake value. No code is committed. |
 | `api.usingMockData` | boolean | Set false to hide every "Sample" badge |
 | `api.dev.loadSampleCloset` | optional | Leave undefined on the real adapter; the buttons disappear |
 
@@ -28,7 +30,7 @@ Things to know when wiring:
 - **Live updates.** `useCloset`, `useProfile` and `useWearProgress` refetch whenever `subscribe` listeners fire. With Convex, either call the listeners from a `client.onUpdate` / watch on the closet query, or replace the three hooks with `useQuery` and keep their return shape (`null` while loading).
 - **Isolated swap.** When any piece of the current outfit stops being `available` (including from a second phone), Home calls `stylist.suggest` with every other piece in `lockedItemIds` and the removed piece in `excludeItemIds`, then swaps only the piece of the same category from `outfits[0]`. **Change** uses the same call. `excludeItemIds` is an addition to the plan's minimum contract; Shresth needs to honor it.
 - **Locked piece unavailable.** If `lockedUnavailableItemIds` is non-empty, Home unlocks those pieces and asks the user to try again.
-- **Optional backend fields.** Home sends `currentItemIds` (the whole current look) on single-piece changes and prefers the returned `swaps` entry for the changed piece, falling back to a same-category match. `confirmWear` sends `tzOffsetMinutes` as minutes east of UTC (`-new Date().getTimezoneOffset()`, so Pacific standard time is -480); flip the sign in Home if the backend expects the other convention. The saved card shows `streakDays` when returned.
+- **Optional backend fields.** Home sends `currentItemIds` (the whole current look) on every re-suggest of the look on screen: a manual Change, the automatic swap when a worn piece becomes unavailable, and asking again with the same occasion. Only the first suggestion and a new occasion omit it, because there is no look to keep. On single-piece changes it and prefers the returned `swaps` entry for the changed piece, falling back to a same-category match. `confirmWear` sends `tzOffsetMinutes` as minutes east of UTC (`-new Date().getTimezoneOffset()`, so Pacific standard time is -480); flip the sign in Home if the backend expects the other convention. The saved card shows `streakDays` when returned.
 - **Wear idempotency.** Home sends one `requestId` per distinct outfit and reuses it on retry.
 - **Onboarding fields** (`heightCm`, `proportion`, `adjust`, `photoUri`) and `WearProgress` are not in `shared/contract.ts`. Add them there if the backend stores them.
 - **Crops.** `GarmentThumb` shows `media.url` when present, otherwise a labeled color swatch from `colorHex`.
@@ -63,7 +65,7 @@ Cross-screen state lives in `src/state/session.ts`: `homeNotice`, `pendingPrompt
 
 ## Test IDs for Revyl
 
-`onboarding-preset`, `onboarding-create`, `scan-cta`, `closet-scan`, `scan-record`, `scan-choose`, `scan-sample` (mock only), `candidate-<id>`, `merge-<id>`, `keep-<id>`, `add-to-closet`, `plans-input`, `plans-send`, `chip-<category>`, `action-lock`, `action-change`, `action-laundry`, `change-banner`, `wearing-this`, `wear-saved`, `laundry-done`, `closet-<itemId>`.
+`onboarding-preset`, `onboarding-create`, `scan-cta`, `closet-scan`, `scan-record`, `scan-choose`, `scan-sample` (mock only), `candidate-<id>`, `merge-<id>`, `keep-<id>`, `add-to-closet`, `delete-scan`, `delete-scan-confirm`, `plans-input`, `plans-send`, `chip-<category>`, `action-lock`, `action-change`, `action-laundry`, `change-banner`, `wearing-this`, `wear-saved`, `laundry-done`, `closet-<itemId>`.
 
 ## What is mocked
 

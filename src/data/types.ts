@@ -9,6 +9,8 @@ import type {
   ClosetSetStatusResult,
   ConfirmWearArgs,
   ConfirmWearResult,
+  DeleteScanArgs,
+  DeleteScanResult,
   ScanConfirmArgs,
   ScanConfirmResult,
   ScanGetArgs,
@@ -47,6 +49,10 @@ export type WearProgress = {
 export type WearAgainApi = {
   /** True shows "Sample data" labels across the UI. */
   usingMockData: boolean;
+  /** The closet's only credential. The real adapter reads EXPO_PUBLIC_CLOSET_CODE; never commit a real one. */
+  closetCode: string;
+  /** privacy:deleteScan. Removes the scan, its candidates and its media. */
+  deleteScan: (args: DeleteScanArgs) => Promise<DeleteScanResult>;
   media: {
     /** Extract frames from the local clip, upload them, and return scans:start args. */
     prepareScan: (clipUri: string | null) => Promise<ScanStartArgs>;

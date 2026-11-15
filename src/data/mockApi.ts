@@ -63,6 +63,11 @@ function challengeFor(itemIds: Id[]): ChallengeProgress[] {
 
 export const mockApi: WearAgainApi = {
   usingMockData: true,
+  closetCode: 'mock-closet-not-a-real-code',
+
+  async deleteScan({ scanId }) {
+    return { deleted: scans.delete(scanId) };
+  },
 
   media: {
     async prepareScan() {

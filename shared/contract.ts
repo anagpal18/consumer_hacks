@@ -110,6 +110,14 @@ export type ScanConfirmResult = {
 };
 
 // ---------------------------------------------------------------------------
+// privacy:deleteScan
+// ---------------------------------------------------------------------------
+
+/** Deletes a scan, its candidates and its uploaded media. Confirmed closet items are kept. */
+export type DeleteScanArgs = { closetCode: string; scanId: Id };
+export type DeleteScanResult = { deleted: boolean };
+
+// ---------------------------------------------------------------------------
 // closet:list, closet:setStatus, closet:markWashed
 // ---------------------------------------------------------------------------
 

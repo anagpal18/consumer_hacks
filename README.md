@@ -17,6 +17,16 @@ npx expo export --platform web   # bundle check
 
 Add packages with `npx expo install <package>` so versions match the Expo SDK.
 
+## Closet code
+
+The closet code is the only credential for a closet, so it never goes in source. When the app is wired to Convex, put it in `.env.local` (git-ignored):
+
+```bash
+EXPO_PUBLIC_CLOSET_CODE=<long random code from docs/backend-handoff.md>
+```
+
+The sample-data build needs no code; its mock adapter uses a fake value.
+
 ## Layout
 
 | Path | Owner | What |

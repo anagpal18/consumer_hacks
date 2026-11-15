@@ -57,7 +57,12 @@ export default function HomeScreen() {
     setMessage(null);
     setChange(null);
     try {
-      const result = await api.stylist.suggest({ prompt: text, lockedItemIds: locked });
+      const sameOccasion = !!outfit && text.trim() === occasion;
+      const result = await api.stylist.suggest({
+        prompt: text,
+        lockedItemIds: locked,
+        currentItemIds: sameOccasion ? outfit.itemIds : undefined,
+      });
       const gone = result.lockedUnavailableItemIds ?? [];
       if (gone.length > 0) {
         setLocked(locked.filter((id) => !gone.includes(id)));
