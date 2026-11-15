@@ -28,6 +28,7 @@ There is no login. Every function takes `closetCode: string` (4 to 64 characters
 1. The client extracts about 8 to 12 frames (JPEG, PNG or WebP, at most 10 MB each, at most 16 frames).
 2. For each frame, `scans:generateUploadUrl({})` returns a URL. `POST` the bytes to it with `Content-Type: image/jpeg`, and the response is `{ storageId }`. (`media:generateUploadUrl` is the same function under another name.)
 3. `scans:start({ closetCode, frames: [{ frameId?, storageId, timestampMs }], videoStorageId? })` returns `{ scanId, status: "queued" }`. If you omit `frameId`, the server assigns `f1`, `f2` and so on in timestamp order.
+   - **Server-side extraction:** you can instead upload the clip itself (mp4 or mov, at most 50 MB and 60 s) and call `scans:start({ closetCode, frames: [], videoStorageId })`. The backend picks about 10 sharp, still frames with ffmpeg (about 1 s of work) and then detects as usual. `progress.framesTotal` reads 0 until extraction finishes.
 4. Subscribe with `useQuery(api.scans.get, { closetCode, scanId })`. Status moves from `queued` to `processing`, then to `review` or `failed`. In my measurements `processing` took 70 s for 11 frames (see below).
 5. Review cards: `candidates[]` with `candidateId, category, subtype, color, colorHex, crop.url` (a crop of the real frame), `frameId, evidenceFrameIds, uncertain, uncertainReason, possibleDuplicateOf, similarTo[], suggestedName, isPrivate`.
 6. `scans:confirm({ closetCode, scanId, acceptedCandidateIds, edits: [{ candidateId, category?, subtype?, color?, name?, isPrivate?, mergeInto? }] })` returns `{ scanId, status: "confirmed", itemIds, createdCount }`. The confirm runs in one transaction and is idempotent: a double tap or a retry returns the same `itemIds` and creates nothing new. A candidate with `mergeInto` creates no item of its own. You can call confirm again later on the same scan to add a candidate you skipped.
@@ -42,6 +43,8 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 | `NO_ITEMS` | no clothing found | rescan, holding each piece in view |
 | `TIMEOUT`, `MODEL_ERROR`, `MODEL_UNREACHABLE`, `INTERNAL` | vision service problem | `scans:retry({ closetCode, scanId })` |
 | `BAD_FRAME` | a frame is unreadable or missing | upload the frames again and start a new scan |
+| `BAD_VIDEO`, `VIDEO_TOO_LARGE`, `VIDEO_TOO_LONG` | the clip is not mp4/mov, is over 50 MB, or is over 60 s | record a shorter clip |
+| `TOO_DARK` | the clip is too dark to read | rescan in better light, then retry |
 | `BAD_MEDIA`, `TOO_MANY_FRAMES`, `NEEDS_FRAMES`, `BAD_FRAMES` | thrown by `scans:start` | fix the input |
 | `NOT_FOUND`, `FORBIDDEN` | wrong closet or id | check `closetCode` |
 | `NOT_READY` | confirm called before `review` | wait for review |
@@ -66,17 +69,20 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 | `closet:setRenderAssetKey` | `itemId, renderAssetKey: string \| null` | `ClosetItem` |
 | `closet:updateItem` | `itemId, name?, category?, subtype?, color?, colorHex?, isPrivate?` | `ClosetItem` |
 | `closet:addItem` / `closet:deleteItem` | see above / `itemId` | `ClosetItem` / `null` (also deletes the photo) |
-| `stylist:suggest` (action) | `prompt, lockedItemIds, excludeItemIds?, weather?` | `{ outfits[{outfitId, rank, itemIds, reason}], lockedUnavailableItemIds?, source: "model" \| "fallback" \| "rules", message? }` |
-| `outfits:confirmWear` | `itemIds, requestId, outfitId?, occasion?` | `{ wear, challenge[], washReminderItemIds, duplicate }` |
+| `stylist:suggest` (action) | `prompt, lockedItemIds, excludeItemIds?, currentItemIds?, weather?{tempC, condition}` | `{ outfits[{outfitId, rank, itemIds, reason, swaps?[{from, to\|null}]}], lockedUnavailableItemIds?, source: "model" \| "fallback" \| "rules", message? }` |
+| `outfits:confirmWear` | `itemIds, requestId, outfitId?, occasion?, tzOffsetMinutes?` | `{ wear{wearId, itemIds, wornAt, requestId, outfitId}, challenge[{itemId, distinctOutfits, target: 3, completed}], washReminderItemIds, streakDays, duplicate }` |
+| `outfits:streak` (query) | `tzOffsetMinutes?` | `{ streakDays }` |
 | `outfits:challenge` / `outfits:recentWears` (queries) | | challenge progress / last 20 wears |
 | `demo:seed` | | the 8 demo items (idempotent) |
 | `demo:reset` | code must start with `demo` | deletes items, wears and outfits |
 
-**Stylist rules:** looks are built only from available, non-private items you own: top + bottom or a dress, plus shoes, with optional outerwear. Locked items stay in every look. The model only ranks valid combinations, and every look it returns is checked against them, so it can't invent an ID. If the model fails or times out (25 s), you get a deterministic look (`source: "fallback"`). If a locked item is not available, you get `outfits: []`, `lockedUnavailableItemIds` and a `message` asking the user to replace or unlock it.
+**Stylist rules:** looks are built only from available, non-private items you own: top + bottom or a dress, plus shoes, with optional outerwear. Locked items stay in every look. You get two ranked looks whenever two valid looks exist. The model only ranks valid combinations, and every look it returns is checked against them, so it can't invent an ID. `source` is `model`, `fallback` (the model was needed but failed or timed out, so a deterministic look was returned) or `rules` (no model was needed: a single look, a swap, or the replace-or-unlock state). If a locked item is not available, you get `outfits: []`, `lockedUnavailableItemIds` and a `message`, and the UI should offer **Replace** or **Unlock**.
 
-**Single-slot swap (stage flow):** when the shoes go to laundry, call `suggest` again with `lockedItemIds` set to the other pieces of the current look. Only the shoes change.
+**Stage flow (single-slot swap):** keep the current look's ids on the client. `closet:list` is live, so when the shoes go to laundry from the second phone, call `suggest({ prompt, lockedItemIds: [jacket], currentItemIds: currentLook })` and show `outfits[0]`. Only the shoes change, and `swaps` says which piece replaced which, so the mirror can animate just that slot (about 1 s, with no model call). To change one piece on demand, add `excludeItemIds: [thatPiece]`.
 
-**Wear:** `requestId` must be stable per tap (for example a UUID created when the button renders). Sending it twice returns `duplicate: true` and increments nothing. Worn items stay `available`; `wearsSinceWash` grows and `washReminder` turns true at the threshold for that category.
+**Wear:** `requestId` must be stable per tap (for example a UUID created when the button renders). Sending it twice returns `duplicate: true` and increments nothing. Worn items stay `available`; `wearsSinceWash` grows and `washReminder` turns true at the threshold for that category. `tzOffsetMinutes` is **minutes east of UTC**, so Pacific standard time is `-480`. That is the opposite sign of JavaScript's `getTimezoneOffset()`, so send `-new Date().getTimezoneOffset()`. `streakDays` counts consecutive local days with a confirmed wear. Socks and underwear don't make an outfit distinct for the challenge.
+
+**Color and render assets:** `colorHex` is measured from the real crop's pixels (the dominant garment color, ignoring the background along the edges), never guessed by the model. At confirm time, `renderAssetKey` is set only when category, subtype and color family all match an entry in `convex/renderAssets.ts`, which holds the six `demo/*` keys; that table will be replaced by `shared/renderAssets.ts` from Kenil's side when it lands. Otherwise the key stays unset and the renderer should tint a base mesh with `colorHex` and show the crop.
 
 ## Demo closet
 
@@ -103,4 +109,4 @@ Run `demo:seed({ closetCode: "demo-closet" })` (already done on the deployment).
 
 - `npm run convex:deploy` pushes to the deployment. It needs `CONVEX_DEPLOY_KEY` (a dev key), or run `npx convex dev` while logged in.
 - `npm run test:convex` runs vitest with convex-test. `npm run typecheck:convex` typechecks the backend.
-- Secrets live only in the Convex env: `OPENAI_API_KEY` is required. Optional, read at run time so they change without a redeploy: `DETECT_MODEL` (vision model), `DETECT_EFFORT` (default `low`), `DETECT_DETAIL` (default `high`), `OPENAI_STYLIST_MODEL`.
+- Secrets live only in the Convex env: `OPENAI_API_KEY` is required. Optional, read at run time so they change without a redeploy: `DETECT_MODEL` (vision model), `DETECT_EFFORT` (default `low`), `DETECT_DETAIL` (default `high`), `OPENAI_STYLIST_MODEL` (stylist model, default `gpt-5-mini`). The root `convex.json` marks `@ffmpeg-installer/ffmpeg` as an external package for `convex/video.ts`; keep it.
