@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
 import { category, cropBox, scanError } from "./schema";
 import {
+  checkClosetCode,
   claimMedia,
   defaultName,
   ensureProfile,
@@ -44,6 +45,14 @@ async function candidateView(ctx: QueryCtx, c: Doc<"candidates">, idByIndex: Map
     itemId: c.itemId,
   };
 }
+
+export const generateUploadUrl = mutation({
+  args: { closetCode: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (args.closetCode) checkClosetCode(args.closetCode);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
 
 export const start = mutation({
   args: {
