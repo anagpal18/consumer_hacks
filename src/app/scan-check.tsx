@@ -10,8 +10,7 @@ import {
   IS_FIXTURE_MODE,
   extractFrames,
   pickClip,
-  uploadFrames,
-  startScan,
+  scanClip,
   useScan,
   type PickedClip,
 } from '@/data';
@@ -43,13 +42,16 @@ export default function ScanCheckScreen() {
       if (!clip) return append('Cancelled');
       append(`Clip ${clip.durationMs ?? '?'} ms`);
       const started = Date.now();
-      const extracted = await extractFrames(clip);
+      const extracted = await extractFrames(clip).catch((error: Error) => {
+        append(`Extraction failed: ${error.message}`);
+        return [];
+      });
       setFrames(extracted);
       append(`Extracted ${extracted.length} frames in ${Date.now() - started} ms`);
-      const uploaded = await uploadFrames(extracted, (progress) => {
-        if (progress.step === 'uploading' && progress.done === progress.total) append(`Uploaded ${progress.total}`);
+      const result = await scanClip(clip, (progress) => {
+        if (progress.step === 'uploading-video') append(`Fallback: uploading whole clip (${progress.reason})`);
+        if (progress.step === 'uploading' && progress.done === progress.total) append(`Uploaded ${progress.total} frames`);
       });
-      const result = await startScan({ frames: uploaded });
       setScanId(result.scanId);
       append(`scans:start -> ${result.scanId}`);
     } catch (error) {
