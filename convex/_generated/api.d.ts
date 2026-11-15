@@ -15,6 +15,7 @@ import type * as detect from "../detect.js";
 import type * as lib from "../lib.js";
 import type * as media from "../media.js";
 import type * as outfits from "../outfits.js";
+import type * as privacy from "../privacy.js";
 import type * as profiles from "../profiles.js";
 import type * as renderAssets from "../renderAssets.js";
 import type * as scans from "../scans.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   lib: typeof lib;
   media: typeof media;
   outfits: typeof outfits;
+  privacy: typeof privacy;
   profiles: typeof profiles;
   renderAssets: typeof renderAssets;
   scans: typeof scans;
