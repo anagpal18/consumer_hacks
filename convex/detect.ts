@@ -10,7 +10,7 @@ import { colorFamily } from "./renderAssets";
 import type { Category } from "./lib";
 import { extractFramesFromVideo } from "./video";
 
-const DEFAULT_MODEL = "gpt-5-mini";
+const DEFAULT_MODEL = "gpt-6.1-terra";
 
 function detectConfig() {
   return {

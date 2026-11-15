@@ -29,7 +29,7 @@ There is no login. Every function takes `closetCode: string` (4 to 64 characters
 2. For each frame, `scans:generateUploadUrl({})` returns a URL. `POST` the bytes to it with `Content-Type: image/jpeg`, and the response is `{ storageId }`. (`media:generateUploadUrl` is the same function under another name.)
 3. `scans:start({ closetCode, frames: [{ frameId?, storageId, timestampMs }], videoStorageId? })` returns `{ scanId, status: "queued" }`. If you omit `frameId`, the server assigns `f1`, `f2` and so on in timestamp order.
    - **Server-side extraction:** you can instead upload the clip itself (mp4 or mov, at most 50 MB and 60 s) and call `scans:start({ closetCode, frames: [], videoStorageId })`. The backend picks about 10 sharp, still frames with ffmpeg (about 1 s of work) and then detects as usual. `progress.framesTotal` reads 0 until extraction finishes.
-4. Subscribe with `useQuery(api.scans.get, { closetCode, scanId })`. Status moves from `queued` to `processing`, then to `review` or `failed`. In my measurements `processing` took 70 s for 11 frames (see below).
+4. Subscribe with `useQuery(api.scans.get, { closetCode, scanId })`. Status moves from `queued` to `processing`, then to `review` or `failed`. With gpt-6.1-terra a 10-frame scan takes about 20-50 s in `processing`, depending on OpenAI response time.
 5. Review cards: `candidates[]` with `candidateId, category, subtype, color, colorHex, crop.url` (a crop of the real frame), `frameId, evidenceFrameIds, uncertain, uncertainReason, possibleDuplicateOf, similarTo[], suggestedName, isPrivate`.
 6. `scans:confirm({ closetCode, scanId, acceptedCandidateIds, edits: [{ candidateId, category?, subtype?, color?, name?, isPrivate?, mergeInto? }] })` returns `{ scanId, status: "confirmed", itemIds, createdCount }`. The confirm runs in one transaction and is idempotent: a double tap or a retry returns the same `itemIds` and creates nothing new. A candidate with `mergeInto` creates no item of its own. You can call confirm again later on the same scan to add a candidate you skipped.
 7. A piece the scan missed: `closet:addItem({ closetCode, category, color, subtype?, name?, photoStorageId? })`.
@@ -110,4 +110,25 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 
 - `npm run convex:deploy` pushes to the deployment. It needs `CONVEX_DEPLOY_KEY` (a dev key), or run `npx convex dev` while logged in.
 - `npm run test:convex` runs vitest with convex-test. `npm run typecheck:convex` typechecks the backend.
-- Secrets live only in the Convex env: `OPENAI_API_KEY` is required. Optional, read at run time so they change without a redeploy: `DETECT_MODEL` (vision model), `DETECT_EFFORT` (default `low`), `DETECT_DETAIL` (default `high`), `OPENAI_STYLIST_MODEL` (stylist model, default `gpt-5-mini`). The root `convex.json` marks `@ffmpeg-installer/ffmpeg` as an external package for `convex/video.ts`; keep it.
+- Secrets live only in the Convex env: `OPENAI_API_KEY` is required. Optional, read at run time so they change without a redeploy: `DETECT_MODEL` (vision model, default `gpt-6.1-terra`), `DETECT_EFFORT` (default `low`), `DETECT_DETAIL` (default `high`), `OPENAI_STYLIST_MODEL` (stylist model, default `gpt-5-mini`). The root `convex.json` marks `@ffmpeg-installer/ffmpeg` as an external package for `convex/video.ts`; keep it.
+
+## Detection model comparison
+
+| Model | 10-frame runs | Expected garments found (of 10) | Extra real items | Jacket repeat merged | Look-alike tees linked | Server time per scan (s) |
+|---|---|---|---|---|---|---|
+| gpt-5-mini (baseline) | 5 | 8, 9, 8, 10, 10 (missed both jeans twice; once silently merged two tees) | none | 5/5 | by the model in 1 of 5; always since the deterministic check | 22.8, 57.3, 54.9, 42.6, 50.2 |
+| **gpt-6.1-terra (default)** | 8 | 10 in every run | partly hidden third pants, 2 belts | 8/8 | by the model in 1 of 8; always since the deterministic check | 59.7, 58.5, 59.6, 57.5 (old pipeline); 20.8, 20.1, 22.3, 47.6 |
+| gpt-6.1-sol | 5 | 10 in every run | partly hidden third pants, 2 belts | 5/5 | by the model in 0 of 5; always since the deterministic check | 56.7, 58.2 (old pipeline); 17.7, 47.7, 41.4 |
+
+How the eval was run:
+- Frames: 10 real clothing photos from Wikimedia Commons, not a phone clip. They show three black tees, grey and black jeans on mannequins in one frame, a denim jacket plus a mirrored, cropped repeat of it, white sneakers, red socks, red boxer briefs and khaki chinos.
+- Settings: effort `low`, detail `high`. Gpt-6.1-terra at effort `none` gave the same results and the same latency.
+
+Why gpt-6.1-terra is the default:
+- It matches Sol on accuracy at half the price, about $0.016 per scan against about $0.031.
+- It had the better median on the current pipeline.
+- Neither model finishes reliably in 20 s. The same request varied from 18 s to 60 s, and a bare API call with the same 10 images measured 6 s, so most of the spread is OpenAI response time rather than this code.
+- The current pipeline sends the uploaded bytes directly and decodes crops while the model runs, which cut about 3 s.
+- `DETECT_MODEL` is set in the Convex env, so you can switch models without a redeploy.
+
+Server-side video: ffmpeg extracted 10 frames from `fixtures/closet-demo.mp4` in 3.5 s on the cloud deployment. A full video-only scan took 21.7 s on the server and found 7 of 7 pieces, with the two black tees linked as possible duplicates.
