@@ -13,9 +13,13 @@ export default function RootLayout() {
           headerShadowVisible: false,
           headerTintColor: Colors.ink,
           headerTitleStyle: { fontFamily: Fonts.serif },
+          headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: Colors.background },
         }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ title: 'Your avatar' }} />
+        <Stack.Screen name="scan/index" options={{ title: 'Scan your closet' }} />
+        <Stack.Screen name="scan/review" options={{ title: 'Review pieces' }} />
         <Stack.Screen name="profile" options={{ title: 'Profile', presentation: 'modal' }} />
       </Stack>
     </>
