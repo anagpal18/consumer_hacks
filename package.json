@@ -8,8 +8,10 @@
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "convex": "^1.50.0",
     "expo": "~58.0.25",
+    "expo-asset": "~58.0.21",
     "expo-constants": "~58.0.16",
     "expo-device": "~58.0.5",
+    "expo-file-system": "~58.0.13",
     "expo-font": "~58.0.12",
     "expo-glass-effect": "~58.0.5",
     "expo-image": "~58.0.18",
@@ -30,14 +32,18 @@
     "react-native-safe-area-context": "~5.11.1",
     "react-native-screens": "~4.30.1",
     "react-native-web": "~0.21.4",
+    "react-native-webview": "14.0.1",
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
     "@types/react": "~19.3.0",
+    "@types/three": "^0.187.0",
     "convex-test": "^0.0.71",
+    "esbuild": "^0.28.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
+    "three": "^0.187.0",
     "typescript": "~6.0.3",
     "vitest": "^5.1.0"
   },
@@ -51,7 +57,8 @@
     "convex:dev": "convex dev",
     "convex:deploy": "convex dev --once",
     "test:convex": "vitest run",
-    "typecheck:convex": "tsc -p convex --noEmit"
+    "typecheck:convex": "tsc -p convex --noEmit",
+    "build:mirror-viewer": "tsc -p mirror-viewer && node mirror-viewer/build.js"
   },
   "private": true,
   "allowScripts": {

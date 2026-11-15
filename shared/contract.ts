@@ -263,10 +263,24 @@ export type MirrorViewerControls = {
   retry: () => void;
 };
 
+/**
+ * One worn garment. slot is a RenderSlot from shared/renderAssets.ts. Without a
+ * known renderAssetKey the mirror draws a stand-in for the slot tinted with
+ * colorHex and labels it approximate with `label`.
+ */
+export type MirrorGarment = {
+  slot: string;
+  renderAssetKey?: string;
+  colorHex?: string;
+  label: string;
+};
+
 export type MirrorProps = {
   avatar: AvatarRef;
-  /** renderAssetKey of each garment currently worn. Items without a key are not passed. */
+  /** renderAssetKey of each garment currently worn. Items without a key are not passed. Ignored when `garments` is set. */
   garmentAssetKeys: string[];
+  /** Worn garments with their slot and color, so items without a supported asset still show approximately. */
+  garments?: MirrorGarment[];
   onStateChange?: (state: MirrorState) => void;
   /** Called once the viewer can be driven from outside. */
   onControlsReady?: (controls: MirrorViewerControls) => void;

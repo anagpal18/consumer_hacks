@@ -1,126 +1,210 @@
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, Radius } from '@/constants/theme';
-import type { MirrorProps } from '@shared/contract';
+import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, MIRROR_ASSETS, TINT_TEMPLATES } from '@/mirror/assets';
+import { loadAssetSource } from '@/mirror/loadAsset';
+import { MirrorSurface, type MirrorSurfaceHandle } from '@/mirror/MirrorSurface';
+import type { HostMessage, ViewerGarment, ViewerMessage } from '@/mirror/protocol';
+import { VIEWER_HTML } from '@/mirror/viewerHtml.generated';
+import type { MirrorGarment, MirrorProps, MirrorState, MirrorViewerControls } from '@shared/contract';
+import type { RenderSlot } from '@shared/renderAssets';
 
-/**
- * Mirror slot. PLACEHOLDER: a flat paper figure, not the real renderer.
- *
- * Kenil replaces the body of this component with the 3D viewer. The props are the
- * Mirror adapter in shared/contract.ts: avatar reference and garment asset keys in,
- * ready/error state and viewer controls out. Home lays its own controls over this
- * view, so fill the parent and leave the center free for rotate and zoom gestures.
- */
+const READY_TIMEOUT_MS = 45000;
+const FALLBACK_TINT = '#8A8580';
 
-type Slot = 'outerwear' | 'top' | 'bottom' | 'shoes';
+type Worn = Omit<ViewerGarment, 'src'> & { approximate?: string };
 
-const DEMO_ASSETS: Record<string, { slot: Slot; color: string }> = {
-  'demo/jacket-denim': { slot: 'outerwear', color: '#3F5878' },
-  'demo/shirt-white': { slot: 'top', color: '#F1EEE8' },
-  'demo/tee-black': { slot: 'top', color: '#1E1E1E' },
-  'demo/trousers-charcoal': { slot: 'bottom', color: '#3B3B40' },
-  'demo/sneakers-white': { slot: 'shoes', color: '#EDEAE4' },
-  'demo/boots-brown': { slot: 'shoes', color: '#6B4630' },
-};
+/** One entry per slot; a later garment for the same slot replaces an earlier one. */
+function resolveOutfit(garmentAssetKeys: string[], garments: MirrorGarment[] | undefined) {
+  const bySlot = new Map<string, Worn>();
+  const skipped: string[] = [];
+  const entries: MirrorGarment[] =
+    garments ?? garmentAssetKeys.map((key) => ({ slot: MIRROR_ASSETS[key]?.slot ?? '', renderAssetKey: key, label: key }));
+  for (const g of entries) {
+    const known = g.renderAssetKey ? MIRROR_ASSETS[g.renderAssetKey] : undefined;
+    if (known) {
+      bySlot.set(known.slot, { id: known.key, slot: known.slot, asset: known.key, bit: known.bit, approximate: known.approximate });
+      continue;
+    }
+    const template = TINT_TEMPLATES[g.slot as RenderSlot];
+    if (!template) {
+      skipped.push(g.label);
+      continue;
+    }
+    const tint = g.colorHex ?? FALLBACK_TINT;
+    bySlot.set(g.slot, {
+      id: 'tint:' + g.slot + ':' + tint,
+      slot: g.slot,
+      asset: template,
+      bit: MIRROR_ASSETS[template].bit,
+      tint,
+      approximate: g.label + ' (approximate color and shape)',
+    });
+  }
+  return { worn: [...bySlot.values()], skipped };
+}
 
-const SKIN = '#C9A58A';
-const BARE = '#B9AD9E';
-const FIGURE_HEIGHT = 360;
+export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onControlsReady }: MirrorProps) {
+  const surface = useRef<MirrorSurfaceHandle>(null);
+  const sent = useRef(new Set<string>());
+  const booted = useRef(false);
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<MirrorState>({ status: 'loading' });
 
-export function Mirror({ avatar, garmentAssetKeys, onStateChange, onControlsReady }: MirrorProps) {
-  const [yaw, setYaw] = useState(0);
-  const [zoom, setZoom] = useState(1);
-  const [height, setHeight] = useState(0);
-  const drag = useRef({ x: 0, yaw: 0 });
+  const avatarKey = AVATAR_ASSETS[avatar.key] ? avatar.key : DEFAULT_AVATAR_KEY;
+  const showDemoLabel = avatar.demo || avatarKey !== avatar.key;
+  const keysSignature = garmentAssetKeys.join('|');
+  const garmentsSignature = JSON.stringify(garments ?? null);
+  const outfit = useMemo(
+    () => resolveOutfit(keysSignature ? keysSignature.split('|') : [], JSON.parse(garmentsSignature) ?? undefined),
+    [keysSignature, garmentsSignature],
+  );
+
+  const report = useCallback(
+    (next: MirrorState) => {
+      setState(next);
+      onStateChange?.(next);
+    },
+    [onStateChange],
+  );
+
+  const send = useCallback((msg: HostMessage) => surface.current?.send(JSON.stringify(msg)), []);
+
+  const pushScene = useCallback(async () => {
+    try {
+      const avatarSrc = sent.current.has(avatarKey) ? null : await loadAssetSource(AVATAR_ASSETS[avatarKey]);
+      const list: ViewerGarment[] = [];
+      for (const w of outfit.worn) {
+        const src = sent.current.has(w.asset) ? undefined : await loadAssetSource(MIRROR_ASSETS[w.asset].asset);
+        list.push({ id: w.id, slot: w.slot, asset: w.asset, bit: w.bit, tint: w.tint, src });
+      }
+      send({ type: 'scene', avatarId: avatarKey, avatarSrc, garments: list });
+      sent.current.add(avatarKey);
+      for (const w of outfit.worn) sent.current.add(w.asset);
+    } catch (e) {
+      report({ status: 'error', message: e instanceof Error ? e.message : 'Could not load the mirror assets.' });
+    }
+  }, [avatarKey, outfit, send, report]);
+
+  const retry = useCallback(() => {
+    booted.current = false;
+    sent.current = new Set();
+    report({ status: 'loading' });
+    setAttempt((n) => n + 1);
+  }, [report]);
+
+  const controls = useMemo<MirrorViewerControls>(
+    () => ({
+      resetView: () => send({ type: 'reset' }),
+      rotateTo: (yawDeg) => send({ type: 'rotateTo', yawDeg }),
+      setZoom: (scale) => send({ type: 'zoom', scale }),
+      retry,
+    }),
+    [send, retry],
+  );
+
+  const onMessage = useCallback(
+    (raw: string) => {
+      let msg: ViewerMessage;
+      try {
+        msg = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      if (msg.type === 'booted') {
+        booted.current = true;
+        onControlsReady?.(controls);
+        pushScene();
+      } else if (msg.status === 'error') {
+        sent.current = new Set();
+        report({ status: 'error', message: msg.message });
+      } else {
+        report({ status: msg.status });
+      }
+    },
+    [controls, onControlsReady, pushScene, report],
+  );
 
   useEffect(() => {
-    onStateChange?.({ status: 'loading' });
-    const timer = setTimeout(() => onStateChange?.({ status: 'ready' }), 500);
-    onControlsReady?.({
-      resetView: () => {
-        setYaw(0);
-        setZoom(1);
-      },
-      rotateTo: setYaw,
-      setZoom,
-      retry: () => onStateChange?.({ status: 'ready' }),
-    });
+    if (booted.current) pushScene();
+  }, [pushScene]);
+
+  useEffect(() => {
+    if (state.status !== 'loading') return;
+    const timer = setTimeout(() => report({ status: 'error', message: 'The mirror took too long to load.' }), READY_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [onStateChange, onControlsReady]);
+  }, [state.status, attempt, report]);
 
-
-  const worn: Partial<Record<Slot, string>> = {};
-  for (const key of garmentAssetKeys) {
-    const asset = DEMO_ASSETS[key];
-    if (asset) worn[asset.slot] = asset.color;
-  }
-  const torso = worn.top ?? BARE;
-  const sleeves = worn.outerwear ?? torso;
-  const scale = height > 0 ? Math.min(1.5, Math.max(0.5, (height * 0.62) / FIGURE_HEIGHT)) * zoom : 1;
-  const turn = Math.cos((yaw * Math.PI) / 180);
+  const notes = [
+    ...outfit.worn.flatMap((w) => (w.approximate ? ['Approximate: ' + w.approximate] : [])),
+    ...outfit.skipped.map((label) => 'Not shown: ' + label),
+  ];
 
   return (
-    <View style={styles.viewport} onLayout={(event) => setHeight(event.nativeEvent.layout.height)} 
-      onStartShouldSetResponder={() => true}
-      onResponderGrant={(event) => {
-        drag.current = { x: event.nativeEvent.pageX, yaw };
-      }}
-      onResponderMove={(event) => setYaw(drag.current.yaw + (event.nativeEvent.pageX - drag.current.x) * 0.8)}>
-      <View style={styles.floor} />
-      <View style={[styles.figure, { transform: [{ scale }, { scaleX: Math.abs(turn) < 0.15 ? 0.15 : turn }] }]}>
-        <View style={styles.head} />
-        <View style={styles.neck} />
-        <View style={styles.upper}>
-          <View style={[styles.arm, { backgroundColor: sleeves }]} />
-          <View style={[styles.torso, { backgroundColor: torso }]}>
-            {worn.outerwear ? (
-              <>
-                <View style={[styles.lapel, { left: 0, backgroundColor: worn.outerwear }]} />
-                <View style={[styles.lapel, { right: 0, backgroundColor: worn.outerwear }]} />
-              </>
-            ) : null}
+    <View style={styles.viewport}>
+      <MirrorSurface
+        key={attempt}
+        ref={surface}
+        html={VIEWER_HTML}
+        onMessage={onMessage}
+        onFailure={(message) => report({ status: 'error', message })}
+      />
+      {showDemoLabel && (
+        <View style={[styles.pill, styles.topLeft]} pointerEvents="none">
+          <Text style={styles.pillText}>Demo avatar</Text>
+        </View>
+      )}
+      {notes.length > 0 && (
+        <View style={styles.notes} pointerEvents="none">
+          {notes.map((n) => (
+            <Text key={n} style={styles.note}>
+              {n}
+            </Text>
+          ))}
+        </View>
+      )}
+      {state.status === 'loading' && (
+        <View style={styles.center} pointerEvents="none">
+          <ActivityIndicator color={Colors.inkSoft} />
+          <Text style={styles.detail}>Loading mirror</Text>
+        </View>
+      )}
+      {state.status === 'error' && (
+        <View style={styles.center}>
+          <View style={styles.card}>
+            <Text style={styles.title}>The mirror could not load</Text>
+            <Text style={styles.detail}>{state.message}</Text>
+            <Pressable accessibilityRole="button" onPress={retry} style={styles.button}>
+              <Text style={styles.buttonText}>Retry</Text>
+            </Pressable>
           </View>
-          <View style={[styles.arm, { backgroundColor: sleeves }]} />
         </View>
-        <View style={styles.lower}>
-          <View style={[styles.leg, { backgroundColor: worn.bottom ?? BARE }]} />
-          <View style={[styles.leg, { backgroundColor: worn.bottom ?? BARE }]} />
-        </View>
-        <View style={styles.lower}>
-          <View style={[styles.shoe, { backgroundColor: worn.shoes ?? BARE }]} />
-          <View style={[styles.shoe, { backgroundColor: worn.shoes ?? BARE }]} />
-        </View>
-      </View>
-      <View style={styles.tag} pointerEvents="none">
-        <Text style={styles.tagText}>Placeholder mirror</Text>
-        <Text style={styles.tagText}>{avatar.demo ? 'Demo avatar' : 'Avatar'} · drag to turn</Text>
-      </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  viewport: { flex: 1, backgroundColor: Colors.mirror, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  floor: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '30%', backgroundColor: Colors.mirrorDeep },
-  figure: { alignItems: 'center', height: FIGURE_HEIGHT, marginBottom: 40 },
-  head: { width: 46, height: 52, borderRadius: 23, backgroundColor: SKIN },
-  neck: { width: 18, height: 10, backgroundColor: SKIN },
-  upper: { flexDirection: 'row', alignItems: 'flex-start', gap: 3 },
-  arm: { width: 22, height: 118, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
-  torso: { width: 88, height: 128, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
-  lapel: { position: 'absolute', top: 0, bottom: 0, width: 30 },
-  lower: { flexDirection: 'row', gap: 6 },
-  leg: { width: 40, height: 150, borderBottomLeftRadius: 6, borderBottomRightRadius: 6, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
-  shoe: { width: 46, height: 18, borderRadius: 8, marginHorizontal: -3, borderWidth: 1, borderColor: 'rgba(0,0,0,0.18)' },
-  tag: {
-    position: 'absolute',
-    top: 290,
-    left: 12,
-    backgroundColor: Colors.mockSoft,
+  viewport: { flex: 1, backgroundColor: Colors.mirror, borderRadius: Radius.lg, overflow: 'hidden' },
+  center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: Spacing.two },
+  topLeft: { position: 'absolute', top: Spacing.three, left: Spacing.three },
+  pill: { backgroundColor: Colors.mockSoft, borderRadius: Radius.pill, paddingHorizontal: Spacing.three, paddingVertical: Spacing.one },
+  pillText: { color: Colors.mock, fontSize: 12, fontWeight: '600' },
+  notes: { position: 'absolute', left: Spacing.three, right: Spacing.three, bottom: Spacing.three, gap: Spacing.one },
+  note: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.surface,
+    color: Colors.inkSoft,
+    fontSize: 11,
     borderRadius: Radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    overflow: 'hidden',
   },
-  tagText: { fontSize: 10, fontWeight: '600', color: Colors.mock },
+  card: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.four, gap: Spacing.two, maxWidth: 280, alignItems: 'center' },
+  title: { fontFamily: Fonts.serif, fontSize: 17, color: Colors.ink },
+  detail: { fontSize: 13, color: Colors.muted, textAlign: 'center' },
+  button: { marginTop: Spacing.one, backgroundColor: Colors.accent, borderRadius: Radius.pill, paddingHorizontal: Spacing.five, paddingVertical: Spacing.two },
+  buttonText: { color: Colors.onAccent, fontWeight: '600' },
 });
