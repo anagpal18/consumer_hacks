@@ -115,7 +115,14 @@ export type ScanConfirmResult = {
 
 /** Deletes a scan, its candidates and its uploaded media. Confirmed closet items are kept. */
 export type DeleteScanArgs = { closetCode: string; scanId: Id };
-export type DeleteScanResult = { deleted: boolean };
+export type DeleteScanResult = {
+  deleted: boolean;
+  scanId: Id;
+  deletedCandidates: number;
+  deletedFiles: number;
+  /** Photos of already confirmed items, which are kept. */
+  keptItemPhotos: number;
+};
 
 // ---------------------------------------------------------------------------
 // closet:list, closet:setStatus, closet:markWashed

@@ -63,7 +63,7 @@ export default function ScanReviewScreen() {
     setSaving(true);
     setError(null);
     try {
-      await api.deleteScan({ closetCode: api.closetCode, scanId });
+      await api.privacy.deleteScan({ closetCode: api.closetCode, scanId });
       setSession({ activeScanId: null, scanDrafts: { ...scanDrafts, [scanId]: undefined as never } });
       router.replace('/scan');
     } catch {

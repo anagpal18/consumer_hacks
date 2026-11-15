@@ -20,7 +20,7 @@ Every screen calls `api` from `@/data/api` and nothing else. `api` is typed as `
 | `api.outfits.progress()` | `WearProgress` (UI-only type) | Profile |
 | `api.profile.get()`, `api.profile.save(patch)` | `AvatarProfile` (UI-only type) | Onboarding, Home, Profile |
 | `api.subscribe(listener)` | | `src/data/hooks.ts` refetches on every call of the listener |
-| `api.deleteScan({ closetCode, scanId })` | `DeleteScanArgs -> DeleteScanResult`, backed by `privacy:deleteScan` | Review, **Delete this scan** (asks once, then returns to `/scan`) |
+| `api.privacy.deleteScan({ closetCode, scanId })` | `DeleteScanArgs -> DeleteScanResult` (`{ deleted, scanId, deletedCandidates, deletedFiles, keptItemPhotos }`), backed by `privacy:deleteScan` | Review, **Delete this scan** (asks once, then returns to `/scan`) |
 | `api.closetCode` | string | The real adapter sets it from `process.env.EXPO_PUBLIC_CLOSET_CODE` and adds it to every Convex call. The mock uses an obviously fake value. No code is committed. |
 | `api.usingMockData` | boolean | Set false to hide every "Sample" badge |
 | `api.dev.loadSampleCloset` | optional | Leave undefined on the real adapter; the buttons disappear |

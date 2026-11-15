@@ -51,8 +51,10 @@ export type WearAgainApi = {
   usingMockData: boolean;
   /** The closet's only credential. The real adapter reads EXPO_PUBLIC_CLOSET_CODE; never commit a real one. */
   closetCode: string;
-  /** privacy:deleteScan. Removes the scan, its candidates and its media. */
-  deleteScan: (args: DeleteScanArgs) => Promise<DeleteScanResult>;
+  privacy: {
+    /** privacy:deleteScan. Removes the scan, its candidates and its media; confirmed item photos are kept. */
+    deleteScan: (args: DeleteScanArgs) => Promise<DeleteScanResult>;
+  };
   media: {
     /** Extract frames from the local clip, upload them, and return scans:start args. */
     prepareScan: (clipUri: string | null) => Promise<ScanStartArgs>;

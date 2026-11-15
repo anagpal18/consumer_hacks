@@ -65,8 +65,11 @@ export const mockApi: WearAgainApi = {
   usingMockData: true,
   closetCode: 'mock-closet-not-a-real-code',
 
-  async deleteScan({ scanId }) {
-    return { deleted: scans.delete(scanId) };
+  privacy: {
+    async deleteScan({ scanId }) {
+      const deleted = scans.delete(scanId);
+      return { deleted, scanId, deletedCandidates: deleted ? SAMPLE_SCAN_REVIEW.candidates.length : 0, deletedFiles: 0, keptItemPhotos: 0 };
+    },
   },
 
   media: {
