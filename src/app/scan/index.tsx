@@ -131,12 +131,10 @@ export default function ScanScreen() {
 
       <Button label="Record a video" icon="videocam-outline" testID="scan-record" onPress={() => begin('camera')} />
       <Button label="Choose a video" icon="images-outline" variant="secondary" testID="scan-choose" onPress={() => begin('library')} />
-      {api.usingMockData ? (
-        <View style={styles.sample}>
-          <Button label="Use the sample clip" variant="ghost" compact testID="scan-sample" onPress={() => begin('sample')} />
-          <MockBadge label="Sample data build" />
-        </View>
-      ) : null}
+      <View style={styles.sample}>
+        <Button label={api.usingMockData ? 'Use the sample clip' : 'Use the demo closet clip'} variant="ghost" compact testID="scan-sample" onPress={() => begin('sample')} />
+        <MockBadge label={api.usingMockData ? 'Sample data build' : 'Preview build: bundled fixtures/closet-demo.mp4, real detection'} />
+      </View>
     </ScrollView>
   );
 }

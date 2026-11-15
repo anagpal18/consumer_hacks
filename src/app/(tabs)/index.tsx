@@ -9,6 +9,7 @@ import { Button, CATEGORY_LABEL, GarmentThumb, MockBadge } from '@/components/ui
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { api } from '@/data/api';
 import { useCloset, useProfile } from '@/data/hooks';
+import { outfitToMirrorProps } from '@/data/mirror';
 import { setSession, useSession } from '@/state/session';
 import type {
   ClosetItem,
@@ -207,8 +208,7 @@ export default function HomeScreen() {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.mirrorArea}>
         <Mirror
-          avatar={profile?.avatar ?? { kind: 'preset', key: 'demo/avatar-a', demo: true }}
-          garmentAssetKeys={items.map((item) => item.renderAssetKey).filter((key): key is string => !!key)}
+          {...outfitToMirrorProps(profile?.avatar ?? { kind: 'preset', key: 'demo/avatar-a', demo: true }, items)}
           onStateChange={setMirrorState}
           onControlsReady={setControls}
         />
