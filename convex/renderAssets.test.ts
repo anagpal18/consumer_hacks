@@ -39,4 +39,16 @@ describe("renderAssetKey matching", () => {
     }
     expect(colorFamily(dominantHex({ width: w, height: w, data }))).toBe("blue");
   });
+
+  test("a garment the same color as the background is not replaced by a small dark detail", () => {
+    const w = 20;
+    const data = new Uint8Array(w * w * 4);
+    for (let y = 0; y < w; y++) {
+      for (let x = 0; x < w; x++) {
+        const stripe = y === 10 && x >= 6 && x < 14;
+        data.set(stripe ? [8, 6, 6, 255] : [238, 236, 232, 255], (y * w + x) * 4);
+      }
+    }
+    expect(colorFamily(dominantHex({ width: w, height: w, data }))).toBe("white");
+  });
 });

@@ -91,14 +91,14 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 
 | demoKey | itemId | renderAssetKey |
 |---|---|---|
-| jacket_denim | j97ccb2e3tbree73a7wq64754n8j9gty | demo/jacket-denim |
-| shirt_white | j97a4ab3ejfhyp8qxymj63spdh8j94bf | demo/shirt-white |
-| tee_black | j976wkg6q3bnj7wnqeter0a57d8j93y6 | demo/tee-black |
-| trousers_charcoal | j9774g76a5bbpa4f2j7m0469jd8j8nd7 | demo/trousers-charcoal |
-| chinos_khaki | j974nga6dzcygxr6w4zjwr42zh8j8ztf | (none) |
-| sneakers_white | j973aac5bf0pkn8rw2s1abr3ax8j9pq5 | demo/sneakers-white |
-| boots_brown | j973m0g63gbjs4rg503vtmaqbs8j92z6 | demo/boots-brown |
-| socks_grey | j97d3rq68e286vdb4ztrj334nx8j854h | (private, none) |
+| jacket_denim | j97246qb8he4hknvf04yrrzaa18j9xt1 | demo/jacket-denim |
+| shirt_white | j970axjj8qhpwqtqy1dc0s66518j9jmc | demo/shirt-white |
+| tee_black | j97cqzkqcetm8ymbncg3tq31c58j873v | demo/tee-black |
+| trousers_charcoal | j970cz3bsme88q2mbfr6c77gqx8j9pzw | demo/trousers-charcoal |
+| chinos_khaki | j97azzd1756ss2zx6mgd9865f18j8mkd | (none) |
+| sneakers_white | j975yzwgqsv2yg1t23dhffr8y98j8pze | demo/sneakers-white |
+| boots_brown | j97ezjg1khtpbqjse05anjhzqd8j993s | demo/boots-brown |
+| socks_grey | j97cyjf02vgcv7bxxz02eqcm058j9wk9 | (private, none) |
 
 **renderAssetKey:** the keys reuse the `demo/*` placeholders from `shared/contract.ts`. Kenil owns the real asset list. Detection never sets a key, so unknown matches stay unset as the spec requires. After a scan, map a real item to a supported asset with `closet:setRenderAssetKey`. Items without a key should show their `media.url` crop.
 

@@ -31,7 +31,7 @@ export function colorFamily(hex: string | undefined): ColorFamily | undefined {
   if (l < 0.16) return "black";
   if (s < 0.2) {
     if (l < 0.35) return "black";
-    if (h >= 30 && h < 65 && s >= 0.08 && l > 0.5) return "beige";
+    if (h >= 30 && h < 65 && s >= 0.08 && l > 0.5 && l < 0.8) return "beige";
     return l > 0.72 ? "white" : "grey";
   }
   if (l > 0.85) return "white";

@@ -37,7 +37,9 @@ export function dominantHex(bitmap: { width: number; height: number; data: Uint8
   const background = [...edgeBins.entries()].filter(([, n]) => n > edge.length * 0.15).map(([k]) => k);
   const isBackground = (p: readonly [number, number, number]) =>
     background.includes(((p[0] >> 5) << 6) | ((p[1] >> 5) << 3) | (p[2] >> 5));
-  const best = bins((p) => !isBackground(p)) ?? bins(() => true);
+  const inner = (Math.ceil(h * 0.85) - Math.floor(h * 0.15)) * (Math.ceil(w * 0.85) - Math.floor(w * 0.15));
+  const garment = bins((p) => !isBackground(p));
+  const best = garment && garment.n >= inner * 0.15 ? garment : (bins(() => true) ?? garment);
   if (!best) return undefined;
   const hex = (v: number) => Math.round(v / best.n).toString(16).padStart(2, "0");
   return `#${hex(best.r)}${hex(best.g)}${hex(best.b)}`;
