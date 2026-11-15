@@ -97,7 +97,7 @@ export default function HomeScreen() {
         const itemId = next?.itemIds.find((id) => id !== item.itemId && byId(id)?.category === item.category);
         return itemId ? { itemId, outfitId: next.outfitId } : null;
       };
-      const seen = skipped[item.category] ?? [];
+      const seen = cause === 'change' ? (skipped[item.category] ?? []) : [];
       let replacement = await find([item.itemId, ...seen]);
       let nextSeen = [...seen, item.itemId];
       if (!replacement && seen.length > 0 && cause === 'change') {
@@ -123,8 +123,8 @@ export default function HomeScreen() {
         text:
           cause === 'laundry'
             ? newName
-              ? `${item.name} is in laundry. ${label} changed to ${newName}.${stayed}`
-              : `${item.name} is in laundry. Nothing clean to replace it.${stayed}`
+              ? `${item.name} went to laundry. ${label} changed to ${newName}.${stayed}`
+              : `${item.name} went to laundry. Nothing clean to replace it.${stayed}`
             : `${label} changed: ${item.name} → ${newName}.${stayed}`,
       });
     } catch {
