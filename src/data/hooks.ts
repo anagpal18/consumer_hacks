@@ -2,7 +2,7 @@ import { useQuery } from 'convex/react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import {
-  PRIVATE_CATEGORIES,
+  SAMPLE_AVATAR,
   type ClosetItem,
   type ClosetListArgs,
   type ConfirmWearArgs,
@@ -15,7 +15,8 @@ import {
 
 import { api } from './api';
 import { fixtureStore } from './fixtures';
-import { IS_FIXTURE_MODE } from './mode';
+import { CLOSET_CODE, IS_FIXTURE_MODE } from './mode';
+import { outfitToMirrorProps } from './mirror';
 import { refs } from './refs';
 
 function useClosetFixture(args: ClosetListArgs = {}): ClosetItem[] | undefined {
@@ -25,7 +26,7 @@ function useClosetFixture(args: ClosetListArgs = {}): ClosetItem[] | undefined {
 }
 
 function useClosetLive(args: ClosetListArgs = {}): ClosetItem[] | undefined {
-  return useQuery(refs.closetList, args);
+  return useQuery(refs.closetList, { ...args, closetCode: CLOSET_CODE });
 }
 
 /** Live closet items, undefined while loading. Re-renders on every change, from any device. */
@@ -37,7 +38,7 @@ function useScanFixture(scanId: Id | null | undefined): ScanJob | null | undefin
 }
 
 function useScanLive(scanId: Id | null | undefined): ScanJob | null | undefined {
-  return useQuery(refs.scansGet, scanId ? { scanId } : 'skip');
+  return useQuery(refs.scansGet, scanId ? { scanId, closetCode: CLOSET_CODE } : 'skip');
 }
 
 /** Scan job status and candidates, undefined while loading or when scanId is empty, null when unknown. */
@@ -130,14 +131,13 @@ export function useTodaysLook(prompt = 'today', lockedItemIds: Id[] = []) {
     if (!outfit || !closet) return [];
     return outfit.itemIds.flatMap((id) => closet.find((item) => item.itemId === id) ?? []);
   }, [outfit, closet]);
-  const garmentAssetKeys = items.flatMap((item) =>
-    item.renderAssetKey && !PRIVATE_CATEGORIES.includes(item.category) ? [item.renderAssetKey] : [],
-  );
+  const mirrorProps = useMemo(() => outfitToMirrorProps(SAMPLE_AVATAR, items), [items]);
 
   return {
     outfit,
     items,
-    garmentAssetKeys,
+    mirrorProps,
+    garmentAssetKeys: mirrorProps.garmentAssetKeys,
     lockedUnavailableItemIds: result?.lockedUnavailableItemIds ?? [],
     isLoading,
     error,

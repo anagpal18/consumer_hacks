@@ -15,7 +15,7 @@ import type {
 
 import { liveClient } from './client';
 import { fixtureApi } from './fixtures';
-import { IS_FIXTURE_MODE } from './mode';
+import { CLOSET_CODE, IS_FIXTURE_MODE } from './mode';
 import { refs } from './refs';
 
 /** Imperative calls. Reads go through the hooks so they stay reactive. */
@@ -29,14 +29,16 @@ export type DataApi = {
   confirmWear: (args: ConfirmWearArgs) => Promise<ConfirmWearResult>;
 };
 
+const closetCode = CLOSET_CODE;
+
 const liveApi: DataApi = {
-  generateUploadUrl: () => liveClient().mutation(refs.scansGenerateUploadUrl, {}),
-  startScan: (args) => liveClient().mutation(refs.scansStart, args),
-  confirmScan: (args) => liveClient().mutation(refs.scansConfirm, args),
-  setStatus: (args) => liveClient().mutation(refs.closetSetStatus, args),
-  markWashed: (args = {}) => liveClient().mutation(refs.closetMarkWashed, args),
-  suggest: (args) => liveClient().action(refs.stylistSuggest, args),
-  confirmWear: (args) => liveClient().mutation(refs.outfitsConfirmWear, args),
+  generateUploadUrl: () => liveClient().mutation(refs.scansGenerateUploadUrl, { closetCode }),
+  startScan: (args) => liveClient().mutation(refs.scansStart, { ...args, closetCode }),
+  confirmScan: (args) => liveClient().mutation(refs.scansConfirm, { ...args, closetCode }),
+  setStatus: (args) => liveClient().mutation(refs.closetSetStatus, { ...args, closetCode }),
+  markWashed: (args = {}) => liveClient().mutation(refs.closetMarkWashed, { ...args, closetCode }),
+  suggest: (args) => liveClient().action(refs.stylistSuggest, { ...args, closetCode }),
+  confirmWear: (args) => liveClient().mutation(refs.outfitsConfirmWear, { ...args, closetCode }),
 };
 
 export const api: DataApi = IS_FIXTURE_MODE ? fixtureApi : liveApi;
