@@ -58,6 +58,17 @@ export type ScanStartResult = {
   status: ScanStatus;
 };
 
+/**
+ * scans:generateUploadUrl (mutation, no args) returns a short-lived Convex storage
+ * upload URL. The client POSTs one frame per URL and reads `{ storageId }` from the
+ * response, then passes the storage ids to scans:start.
+ */
+export type ScanGenerateUploadUrlArgs = Record<string, never>;
+export type ScanGenerateUploadUrlResult = string;
+
+/** Body of the storage upload response. */
+export type StorageUploadResponse = { storageId: string };
+
 export type ScanCandidate = {
   candidateId: Id;
   category: GarmentCategory;
