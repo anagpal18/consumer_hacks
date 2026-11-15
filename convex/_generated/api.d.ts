@@ -17,6 +17,7 @@ import type * as outfits from "../outfits.js";
 import type * as profiles from "../profiles.js";
 import type * as scans from "../scans.js";
 import type * as stylist from "../stylist.js";
+import type * as video from "../video.js";
 
 import type {
   ApiFromModules,
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   profiles: typeof profiles;
   scans: typeof scans;
   stylist: typeof stylist;
+  video: typeof video;
 }>;
 
 /**
