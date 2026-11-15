@@ -1,21 +1,31 @@
 import { Stack } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Mirror } from '@/components/Mirror';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { SAMPLE_AVATAR, type MirrorGarment, type MirrorState, type MirrorViewerControls } from '@shared/contract';
+import { BodyControls } from '@/mirror/BodyControls';
+import {
+  SAMPLE_AVATAR,
+  SAMPLE_AVATAR_BODY,
+  SAMPLE_AVATAR_ESTIMATE_RESULT,
+  type AvatarBody,
+  type MirrorGarment,
+  type MirrorState,
+  type MirrorViewerControls,
+} from '@shared/contract';
 
 /**
  * Hidden dev screen (not in the tabs): open wearagain://mirror-lab.
- * Flips the shoes slot to show that only that mesh swaps, and exercises the
- * tint fallback and the viewer controls.
+ * Flips the shoes slot to show that only that mesh swaps, exercises the tint
+ * fallback and the viewer controls, and edits the body live with BodyControls.
  */
 const SHOES = { sneakers: 'demo/sneakers-white', boots: 'demo/boots-brown' } as const;
 
 export default function MirrorLab() {
   const [shoes, setShoes] = useState<keyof typeof SHOES>('sneakers');
   const [tint, setTint] = useState(false);
+  const [body, setBody] = useState<AvatarBody>(SAMPLE_AVATAR_BODY);
   const [state, setState] = useState<MirrorState>({ status: 'loading' });
   const [controls, setControls] = useState<MirrorViewerControls | null>(null);
 
@@ -32,24 +42,37 @@ export default function MirrorLab() {
     <View style={styles.screen}>
       <Stack.Screen options={{ title: 'Mirror lab (dev)' }} />
       <View style={styles.mirror}>
-        <Mirror avatar={SAMPLE_AVATAR} garmentAssetKeys={keys} garments={garments} onStateChange={setState} onControlsReady={setControls} />
+        <Mirror
+          avatar={{ ...SAMPLE_AVATAR, body }}
+          garmentAssetKeys={keys}
+          garments={garments}
+          onStateChange={setState}
+          onControlsReady={setControls}
+        />
       </View>
-      <Text style={styles.state} testID="mirror-state">
-        Mirror: {state.status}
-        {state.status === 'error' ? ' - ' + state.message : ''}
-      </Text>
-      <View style={styles.row}>
-        <Chip label="Sneakers" active={shoes === 'sneakers'} onPress={() => setShoes('sneakers')} />
-        <Chip label="Boots" active={shoes === 'boots'} onPress={() => setShoes('boots')} />
-        <Chip label="Chinos (tint)" active={tint} onPress={() => setTint((t) => !t)} />
-      </View>
-      <View style={styles.row}>
-        <Chip label="Front" onPress={() => controls?.rotateTo(0)} />
-        <Chip label="Side" onPress={() => controls?.rotateTo(90)} />
-        <Chip label="Back" onPress={() => controls?.rotateTo(180)} />
-        <Chip label="Zoom" onPress={() => controls?.setZoom(3)} />
-        <Chip label="Reset" onPress={() => controls?.resetView()} />
-      </View>
+      <ScrollView style={styles.panel} contentContainerStyle={styles.panelContent}>
+        <Text style={styles.state} testID="mirror-state">
+          Mirror: {state.status}
+          {state.status === 'error' ? ' - ' + state.message : ''}
+        </Text>
+        <View style={styles.row}>
+          <Chip label="Sneakers" active={shoes === 'sneakers'} onPress={() => setShoes('sneakers')} />
+          <Chip label="Boots" active={shoes === 'boots'} onPress={() => setShoes('boots')} />
+          <Chip label="Chinos (tint)" active={tint} onPress={() => setTint((t) => !t)} />
+        </View>
+        <View style={styles.row}>
+          <Chip label="Front" onPress={() => controls?.rotateTo(0)} />
+          <Chip label="Side" onPress={() => controls?.rotateTo(90)} />
+          <Chip label="Back" onPress={() => controls?.rotateTo(180)} />
+          <Chip label="Zoom" onPress={() => controls?.setZoom(3)} />
+          <Chip label="Reset" onPress={() => controls?.resetView()} />
+        </View>
+        <View style={styles.row}>
+          <Chip label="Sample estimate" onPress={() => setBody(SAMPLE_AVATAR_ESTIMATE_RESULT.body)} />
+          <Chip label="Reset body" onPress={() => setBody(SAMPLE_AVATAR_BODY)} />
+        </View>
+        <BodyControls value={body} onChange={setBody} />
+      </ScrollView>
     </View>
   );
 }
@@ -64,7 +87,9 @@ function Chip({ label, active, onPress }: { label: string; active?: boolean; onP
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background, padding: Spacing.four, gap: Spacing.three },
-  mirror: { flex: 1 },
+  mirror: { flex: 1.3 },
+  panel: { flex: 1 },
+  panelContent: { gap: Spacing.three, paddingBottom: Spacing.six },
   state: { color: Colors.muted, fontSize: 12 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: { borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.line, backgroundColor: Colors.surface, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },

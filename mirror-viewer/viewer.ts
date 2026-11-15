@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
-import type { AssetSource, HostMessage, ViewerMessage, ViewerGarment } from '../src/mirror/protocol';
+import type { AssetSource, HostMessage, ViewerBody, ViewerMessage, ViewerGarment } from '../src/mirror/protocol';
 
 const TARGET = new THREE.Vector3(0, 0.98, 0);
 const BASE_DISTANCE = 4.6;
@@ -138,6 +139,9 @@ function loop(now: number) {
 requestAnimationFrame(loop);
 
 const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
+const root = new THREE.Group();
+scene.add(root);
 const cache = new Map<string, Promise<THREE.Object3D>>();
 
 function toBuffer(src: AssetSource): Promise<ArrayBuffer> {
@@ -155,11 +159,20 @@ function toBuffer(src: AssetSource): Promise<ArrayBuffer> {
 
 const ALPHA_CUTOUT = /hair|eyebrow|eyelash/i;
 const fullIndex = new WeakMap<THREE.BufferGeometry, number[]>();
-function prepare(root: THREE.Object3D) {
-  root.traverse((o) => {
+const skins: { male?: THREE.Texture; female?: THREE.Texture } = {};
+function prepare(obj: THREE.Object3D) {
+  obj.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
+    mesh.frustumCulled = false;
     const mat = mesh.material as THREE.MeshStandardMaterial;
+    mat.vertexColors = false;
+    if (mat.name === 'skin_female') {
+      skins.female = mat.map ?? undefined;
+      mesh.visible = false;
+      return;
+    }
+    if (mat.name === 'skin') skins.male = mat.map ?? undefined;
     if (ALPHA_CUTOUT.test(mat.name) || ALPHA_CUTOUT.test(mesh.name)) {
       mat.transparent = false;
       mat.alphaTest = /eyebrow/i.test(mat.name) ? 0.12 : 0.45;
@@ -168,12 +181,13 @@ function prepare(root: THREE.Object3D) {
     } else if (!/skin|eye/i.test(mat.name)) {
       mat.side = THREE.DoubleSide;
     }
-    const hide = mesh.geometry.getAttribute('_hide');
+    // Hide mask bits are stored in COLOR_0.r as bits / 255.
+    const hide = mesh.geometry.getAttribute('color');
     if (hide && mesh.geometry.index && !fullIndex.has(mesh.geometry)) {
       fullIndex.set(mesh.geometry, Array.from(mesh.geometry.index.array));
     }
   });
-  return root;
+  return obj;
 }
 
 function load(id: string, src?: AssetSource) {
@@ -216,17 +230,18 @@ function loadGarment(g: ViewerGarment) {
 }
 
 function applyHideMasks(wornBits: number) {
-  scene.traverse((o) => {
+  root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const full = fullIndex.get(mesh.geometry);
     if (!full) return;
-    const mask = mesh.geometry.getAttribute('_hide');
+    const mask = mesh.geometry.getAttribute('color');
+    const bits = (i: number) => Math.round(mask.getX(i) * 255) & wornBits;
     const keep: number[] = [];
     for (let i = 0; i < full.length; i += 3) {
-      const a = mask.getX(full[i]) & wornBits;
-      const b = mask.getX(full[i + 1]) & wornBits;
-      const c = mask.getX(full[i + 2]) & wornBits;
+      const a = bits(full[i]);
+      const b = bits(full[i + 1]);
+      const c = bits(full[i + 2]);
       if (!(a && b && c)) keep.push(full[i], full[i + 1], full[i + 2]);
     }
     mesh.geometry.setIndex(keep);
@@ -244,27 +259,28 @@ async function setScene(avatarId: string, avatarSrc: AssetSource | null, garment
     const [nextAvatar, ...objects] = await Promise.all([load(avatarId, avatarSrc ?? undefined), ...garments.map(loadGarment)]);
     if (gen !== generation) return;
     if (avatar !== nextAvatar) {
-      if (avatar) scene.remove(avatar);
+      if (avatar) root.remove(avatar);
       avatar = nextAvatar;
-      scene.add(avatar);
+      root.add(avatar);
     }
     const nextSlots = new Map(garments.map((g, i) => [g.slot, { id: g.id, bit: g.bit, object: objects[i] }]));
     for (const [slot, cur] of worn) {
       const next = nextSlots.get(slot);
       if (!next || next.id !== cur.id) {
-        scene.remove(cur.object);
+        root.remove(cur.object);
         worn.delete(slot);
       }
     }
     for (const [slot, next] of nextSlots) {
       if (!worn.has(slot)) {
-        scene.add(next.object);
+        root.add(next.object);
         worn.set(slot, next);
       }
     }
     let bits = 0;
     for (const w of worn.values()) bits |= w.bit;
     applyHideMasks(bits);
+    applyBody();
     dirty = true;
     post({ type: 'state', status: 'ready', slots: Object.fromEntries([...worn].map(([s, w]) => [s, w.id])) });
   } catch (e) {
@@ -273,11 +289,75 @@ async function setScene(avatarId: string, avatarSrc: AssetSource | null, garment
   }
 }
 
+let body: ViewerBody | null = null;
+
+const averages = new WeakMap<THREE.Texture, THREE.Color>();
+function averageColor(tex: THREE.Texture) {
+  let c = averages.get(tex);
+  if (c) return c;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 16;
+  const g = cv.getContext('2d')!;
+  g.drawImage(tex.image as CanvasImageSource, 0, 0, 16, 16);
+  const d = g.getImageData(0, 0, 16, 16).data;
+  let r = 0, gr = 0, b = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 200 || d[i] + d[i + 1] + d[i + 2] < 120) continue;
+    r += d[i]; gr += d[i + 1]; b += d[i + 2]; n++;
+  }
+  c = new THREE.Color().setRGB(r / n / 255, gr / n / 255, b / n / 255, THREE.SRGBColorSpace);
+  averages.set(tex, c);
+  return c;
+}
+
+function applyBody() {
+  if (!body) return;
+  const b = body;
+  const weights: Record<string, number> = {};
+  if (b.meshPreset !== 'male-average') weights['preset:' + b.meshPreset] = 1;
+  for (const [k, value] of Object.entries(b.proportions)) {
+    if (value > 0) weights[k + ':+'] = value;
+    else if (value < 0) weights[k + ':-'] = -value;
+  }
+  root.scale.setScalar(b.heightScale);
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const matName = (mesh.material as THREE.Material).name;
+    if (matName === 'hair_male') mesh.visible = !b.female;
+    if (matName === 'hair_female') mesh.visible = b.female;
+    const dict = mesh.morphTargetDictionary;
+    if (dict && mesh.morphTargetInfluences) {
+      for (const [name, i] of Object.entries(dict)) mesh.morphTargetInfluences[i] = weights[name] ?? 0;
+    }
+    const mat = mesh.material as THREE.MeshStandardMaterial;
+    if (mat.name === 'skin') {
+      const map = (b.female ? skins.female : skins.male) ?? mat.map;
+      if (map && mat.map !== map) {
+        mat.map = map;
+        mat.needsUpdate = true;
+      }
+      if (b.skinTone && map) {
+        const avg = averageColor(map);
+        const want = new THREE.Color(b.skinTone);
+        mat.color.setRGB(Math.min(1.4, want.r / avg.r), Math.min(1.4, want.g / avg.g), Math.min(1.4, want.b / avg.b));
+      } else {
+        mat.color.setRGB(1, 1, 1);
+      }
+    }
+  });
+  dirty = true;
+}
+
 function receive(raw: string | HostMessage) {
   const msg: HostMessage = typeof raw === 'string' ? JSON.parse(raw) : raw;
   switch (msg.type) {
     case 'scene':
       setScene(msg.avatarId, msg.avatarSrc, msg.garments);
+      break;
+    case 'body':
+      body = msg.body;
+      applyBody();
       break;
     case 'reset':
       controls.target.x = TARGET.x;
