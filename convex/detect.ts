@@ -18,7 +18,6 @@ function detectConfig() {
   };
 }
 const MODEL_TIMEOUT_MS = 240_000;
-const MODEL_MAX_SIDE = 1024;
 const CROP_MAX_SIDE = 512;
 const CATEGORIES: Category[] = ["top", "bottom", "outerwear", "dress", "shoes", "socks", "underwear", "accessory"];
 
@@ -150,8 +149,10 @@ async function callModel(content: unknown[], config: ReturnType<typeof detectCon
     );
   }
   const json = (await res.json()) as {
+    usage?: { input_tokens?: number; output_tokens?: number; output_tokens_details?: { reasoning_tokens?: number } };
     output?: { type: string; content?: { type: string; text?: string; refusal?: string }[] }[];
   };
+  console.log("detect usage", config.model, JSON.stringify(json.usage));
   const parts = (json.output ?? []).flatMap((o) => (o.type === "message" ? (o.content ?? []) : []));
   const refusal = parts.find((p) => p.type === "refusal");
   if (refusal) throw new ScanFailure("REFUSED", "The vision service declined these frames. Try a different clip.", true);
@@ -166,28 +167,36 @@ export const run = internalAction({
     const job = await ctx.runMutation(internal.scans.beginProcessing, args);
     if (!job) return;
     const config = detectConfig();
+    const tStart = Date.now();
     try {
-      const images = new Map<string, Img>();
       const content: unknown[] = [];
+      const decodes = new Map<string, Promise<Img>>();
       for (const f of job.frames) {
         const blob = await ctx.storage.get(f.storageId);
         if (!blob) throw new ScanFailure("BAD_FRAME", `Frame ${f.frameId} is missing from storage. Upload the frames again.`, false);
-        let img;
-        try {
-          img = await Jimp.read(Buffer.from(await blob.arrayBuffer()));
-        } catch {
-          throw new ScanFailure("BAD_FRAME", `Frame ${f.frameId} is not a readable JPEG or PNG.`, false);
-        }
-        images.set(f.frameId, img);
-        const small = img.clone();
-        if (Math.max(small.width, small.height) > MODEL_MAX_SIDE) small.scaleToFit({ w: MODEL_MAX_SIDE, h: MODEL_MAX_SIDE });
-        const jpeg = await small.getBuffer("image/jpeg", { quality: 80 });
+        const bytes = Buffer.from(await blob.arrayBuffer());
+        const type = blob.type && /^image\/(jpeg|png|webp)$/.test(blob.type) ? blob.type : "image/jpeg";
+        decodes.set(
+          f.frameId,
+          Jimp.read(bytes).catch(() => {
+            throw new ScanFailure("BAD_FRAME", `Frame ${f.frameId} is not a readable JPEG or PNG.`, false);
+          }),
+        );
         content.push({ type: "input_text", text: `Frame ${f.frameId} at ${(f.timestampMs / 1000).toFixed(1)}s:` });
-        content.push({ type: "input_image", image_url: `data:image/jpeg;base64,${jpeg.toString("base64")}`, detail: config.detail });
+        content.push({ type: "input_image", image_url: `data:${type};base64,${bytes.toString("base64")}`, detail: config.detail });
       }
+      const decoded = Promise.all([...decodes].map(async ([id, p]) => [id, await p] as const));
+      decoded.catch(() => {});
       content.push({ type: "input_text", text: `Frame ids: ${job.frames.map((f) => f.frameId).join(", ")}. List the distinct garments.` });
 
-      const result = await callModel(content, config);
+      const tModel = Date.now();
+      console.log("detect prep ms", tModel - tStart);
+      const result = await callModel(content, config).catch(async (e) => {
+        await decoded;
+        throw e;
+      });
+      console.log("detect model ms", Date.now() - tModel);
+      const images = new Map(await decoded);
       const frameIds = new Set(job.frames.map((f) => f.frameId));
       const kept: Detected[] = [];
       const indexMap = new Map<number, number>();

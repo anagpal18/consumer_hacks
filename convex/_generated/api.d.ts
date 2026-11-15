@@ -9,12 +9,14 @@
  */
 
 import type * as closet from "../closet.js";
+import type * as color from "../color.js";
 import type * as demo from "../demo.js";
 import type * as detect from "../detect.js";
 import type * as lib from "../lib.js";
 import type * as media from "../media.js";
 import type * as outfits from "../outfits.js";
 import type * as profiles from "../profiles.js";
+import type * as renderAssets from "../renderAssets.js";
 import type * as scans from "../scans.js";
 import type * as stylist from "../stylist.js";
 
@@ -26,12 +28,14 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   closet: typeof closet;
+  color: typeof color;
   demo: typeof demo;
   detect: typeof detect;
   lib: typeof lib;
   media: typeof media;
   outfits: typeof outfits;
   profiles: typeof profiles;
+  renderAssets: typeof renderAssets;
   scans: typeof scans;
   stylist: typeof stylist;
 }>;
