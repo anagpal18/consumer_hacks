@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -19,7 +19,8 @@ import {
 const SAMPLE_CLIP_URL = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 
 /**
- * Integration check for the clip-to-frames path, opened with wearagain://scan-check.
+ * Integration check for the clip-to-frames path, opened with wearagain://scan-check
+ * or wearagain://scan-check?clip=<video url> to run against a specific clip.
  * Not part of the product flow; Aditya's capture screen replaces it.
  */
 export default function ScanCheckScreen() {
@@ -28,6 +29,8 @@ export default function ScanCheckScreen() {
   const [scanId, setScanId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const scan = useScan(scanId);
+  const { clip: clipParam } = useLocalSearchParams<{ clip?: string }>();
+  const clipUrl = clipParam || SAMPLE_CLIP_URL;
 
   const append = (line: string) => setLog((lines) => [...lines, line]);
 
@@ -66,8 +69,8 @@ export default function ScanCheckScreen() {
       <Pressable disabled={busy} style={styles.button} onPress={() => run(() => pickClip('library'))}>
         <Text style={styles.buttonText}>Pick a clip from Photos</Text>
       </Pressable>
-      <Pressable disabled={busy} style={styles.button} onPress={() => run(async () => ({ uri: SAMPLE_CLIP_URL, durationMs: null }))}>
-        <Text style={styles.buttonText}>Use sample clip (URL)</Text>
+      <Pressable disabled={busy} style={styles.button} onPress={() => run(async () => ({ uri: clipUrl, durationMs: null }))}>
+        <Text style={styles.buttonText}>{clipParam ? 'Use linked clip' : 'Use sample clip (URL)'}</Text>
       </Pressable>
       {log.map((line, index) => (
         <Text key={index} style={styles.log}>
