@@ -19,6 +19,7 @@ import type * as profiles from "../profiles.js";
 import type * as renderAssets from "../renderAssets.js";
 import type * as scans from "../scans.js";
 import type * as stylist from "../stylist.js";
+import type * as video from "../video.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   renderAssets: typeof renderAssets;
   scans: typeof scans;
   stylist: typeof stylist;
+  video: typeof video;
 }>;
 
 /**
