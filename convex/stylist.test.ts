@@ -266,6 +266,15 @@ describe("outfits:confirmWear", () => {
     expect(streakFromTimes([earlyNov14], pst(16, 0, 10), -480)).toBe(0);
   });
 
+  test("recategorizing follows the private default unless isPrivate is passed", async () => {
+    const t = convexTest(schema, modules);
+    const ids = await seed(t);
+    const update = (args: { category: "underwear" | "top" | "socks"; isPrivate?: boolean }) => t.mutation(api.closet.updateItem, { closetCode: A, itemId: ids.tee_black, ...args });
+    expect((await update({ category: "underwear" })).isPrivate).toBe(true);
+    expect((await update({ category: "top" })).isPrivate).toBe(false);
+    expect((await update({ category: "socks", isPrivate: false })).isPrivate).toBe(false);
+  });
+
   test("items from another closet are rejected", async () => {
     const t = convexTest(schema, modules);
     const ids = await seed(t);
