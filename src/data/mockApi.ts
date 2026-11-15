@@ -151,7 +151,7 @@ export const mockApi: WearAgainApi = {
   },
 
   stylist: {
-    async suggest({ prompt, lockedItemIds, excludeItemIds = [] }) {
+    async suggest({ prompt, lockedItemIds, excludeItemIds = [], currentItemIds }) {
       await delay(500);
       const lockedUnavailable = lockedItemIds.filter(
         (id) => closet.find((item) => item.itemId === id)?.availability !== 'available',
@@ -180,7 +180,11 @@ export const mockApi: WearAgainApi = {
         }
         if (itemIds.length === 0) break;
         if (outfits.some((outfit) => outfit.itemIds.join() === itemIds.join())) continue;
+        const categoryOf = (id: Id) => closet.find((item) => item.itemId === id)?.category;
         outfits.push({
+          swaps: currentItemIds
+            ?.filter((id) => !itemIds.includes(id))
+            .map((from) => ({ from, to: itemIds.find((id) => categoryOf(id) === categoryOf(from)) ?? null })),
           outfitId: `outfit_mock_${Date.now()}_${variant}`,
           rank: variant + 1,
           itemIds,
@@ -209,7 +213,7 @@ export const mockApi: WearAgainApi = {
       );
       const wear: SavedWear = { wearId: `wear_mock_${wearLog.length + 1}`, itemIds, wornAt, requestId };
       wearLog.push(wear);
-      const result: ConfirmWearResult = { wear, challenge: challengeFor(itemIds), duplicate: false };
+      const result: ConfirmWearResult = { wear, challenge: challengeFor(itemIds), duplicate: false, streakDays: 1 };
       wearResults.set(requestId, result);
       emit();
       return result;

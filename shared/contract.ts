@@ -162,6 +162,8 @@ export type StylistSuggestArgs = {
   lockedItemIds: Id[];
   /** Items to avoid, used for "change this piece" without rebuilding the outfit. */
   excludeItemIds?: Id[];
+  /** The look currently on the avatar. Pieces still available are kept; only changed slots are refilled. */
+  currentItemIds?: Id[];
   weather?: Weather;
 };
 
@@ -172,6 +174,8 @@ export type SuggestedOutfit = {
   itemIds: Id[];
   /** One short reason the look fits. */
   reason: string;
+  /** What changed against currentItemIds. `to` is null when a slot could not be refilled. */
+  swaps?: { from: Id; to: Id | null }[];
 };
 
 export type StylistSuggestResult = {
@@ -190,6 +194,7 @@ export type ConfirmWearArgs = {
   requestId: string;
   outfitId?: Id;
   occasion?: string;
+  tzOffsetMinutes?: number;
 };
 
 export type SavedWear = {
@@ -212,6 +217,7 @@ export type ConfirmWearResult = {
   challenge: ChallengeProgress[];
   /** True when this requestId was already saved and nothing was incremented. */
   duplicate: boolean;
+  streakDays?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -339,12 +345,14 @@ export const SAMPLE_CONFIRM_WEAR_ARGS: ConfirmWearArgs = {
   requestId: 'req_sample_1',
   outfitId: 'outfit_sample_1',
   occasion: 'dinner with friends',
+  tzOffsetMinutes: -480,
 };
 
 export const SAMPLE_CONFIRM_WEAR_RESULT: ConfirmWearResult = {
   wear: { wearId: 'wear_sample_1', itemIds: SAMPLE_CONFIRM_WEAR_ARGS.itemIds, wornAt: 1794787200000, requestId: 'req_sample_1' },
   challenge: [{ itemId: 'item_jacket_denim', distinctOutfits: 2, target: 3, completed: false }],
   duplicate: false,
+  streakDays: 1,
 };
 
 export const SAMPLE_MIRROR_PROPS: Pick<MirrorProps, 'avatar' | 'garmentAssetKeys'> = {

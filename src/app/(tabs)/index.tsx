@@ -92,9 +92,17 @@ export default function HomeScreen() {
     setMessage(null);
     try {
       const find = async (exclude: Id[]) => {
-        const result = await api.stylist.suggest({ prompt: occasion, lockedItemIds: others, excludeItemIds: exclude });
+        const result = await api.stylist.suggest({
+          prompt: occasion,
+          lockedItemIds: others,
+          excludeItemIds: exclude,
+          currentItemIds: outfit.itemIds,
+        });
         const next = result.outfits[0];
-        const itemId = next?.itemIds.find((id) => id !== item.itemId && byId(id)?.category === item.category);
+        const swap = next?.swaps?.find((entry) => entry.from === item.itemId);
+        const itemId = swap
+          ? swap.to
+          : next?.itemIds.find((id) => id !== item.itemId && byId(id)?.category === item.category);
         return itemId ? { itemId, outfitId: next.outfitId } : null;
       };
       const seen = cause === 'change' ? (skipped[item.category] ?? []) : [];
@@ -146,6 +154,7 @@ export default function HomeScreen() {
         requestId: wearRequest.current.id,
         outfitId: outfit.outfitId,
         occasion: occasion || undefined,
+        tzOffsetMinutes: -new Date().getTimezoneOffset(),
       });
       setSaved(result);
       setSavedOpen(true);
@@ -278,6 +287,11 @@ export default function HomeScreen() {
             {topChallenge ? (
               <Text style={styles.savedText}>
                 One Piece, Three Ways: {byId(topChallenge.itemId)?.name} is at {topChallenge.distinctOutfits} of {topChallenge.target}.
+              </Text>
+            ) : null}
+            {saved.streakDays ? (
+              <Text style={styles.savedText}>
+                {saved.streakDays}-day streak.
               </Text>
             ) : null}
             <View style={styles.savedActions}>
