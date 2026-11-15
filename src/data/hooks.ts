@@ -55,9 +55,9 @@ function applySwaps(currentItemIds: Id[], outfit: Outfit): Outfit {
 
 /**
  * Calls stylist:suggest. The previous result stays in `result` while a new request
- * runs, so the mirror keeps the current outfit until the next one arrives. Unless the
- * caller passes currentItemIds, the top cached outfit is sent as the current look, and
- * returned swaps are applied to it so only the changed slot moves on the mirror.
+ * runs, so the mirror keeps the current outfit until the next one arrives. Whenever an
+ * outfit is on screen its item ids are always sent as currentItemIds (the backend needs
+ * them to swap only the changed slot), and returned swaps are applied to it in place.
  */
 export function useStylistSuggest() {
   const [result, setResult] = useState<SuggestResult>();
@@ -66,9 +66,9 @@ export function useStylistSuggest() {
   const latest = useRef(0);
   const shown = useRef<Id[] | undefined>(undefined);
 
-  const suggest = useCallback(async (args: SuggestArgs) => {
+  const suggest = useCallback(async (args: Omit<SuggestArgs, 'currentItemIds'>) => {
     const call = ++latest.current;
-    const currentItemIds = args.currentItemIds ?? shown.current;
+    const currentItemIds = shown.current;
     setIsLoading(true);
     setError(undefined);
     try {

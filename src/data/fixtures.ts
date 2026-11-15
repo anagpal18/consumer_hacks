@@ -151,6 +151,13 @@ export const fixtureApi: DataApi = {
     return delay({ scanId, status: 'confirmed' as const, itemIds });
   },
 
+  async deleteScan(scanId) {
+    const scans = { ...state.scans };
+    delete scans[scanId];
+    update({ scans });
+    await delay(null);
+  },
+
   async setStatus({ itemId, availability }) {
     const item = state.closet.find((candidate) => candidate.itemId === itemId);
     if (!item) throw new Error(`Unknown item ${itemId}`);

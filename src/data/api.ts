@@ -1,4 +1,5 @@
 import type {
+  Id,
   ClosetMarkWashedArgs,
   ClosetMarkWashedResult,
   ClosetSetStatusArgs,
@@ -20,6 +21,8 @@ export type DataApi = {
   generateUploadUrl: () => Promise<string>;
   startScan: (args: ScanStartArgs) => Promise<ScanStartResult>;
   confirmScan: (args: ScanConfirmArgs) => Promise<ScanConfirmResult>;
+  /** Deletes a scan with its frames and crops (privacy:deleteScan). */
+  deleteScan: (scanId: Id) => Promise<void>;
   setStatus: (args: ClosetSetStatusArgs) => Promise<ClosetSetStatusResult>;
   markWashed: (args?: ClosetMarkWashedArgs) => Promise<ClosetMarkWashedResult>;
   suggest: (args: SuggestArgs) => Promise<SuggestResult>;
@@ -32,6 +35,9 @@ const liveApi: DataApi = {
   generateUploadUrl: () => liveClient().mutation(refs.scansGenerateUploadUrl, { closetCode }),
   startScan: (args) => liveClient().mutation(refs.scansStart, { ...args, closetCode }),
   confirmScan: (args) => liveClient().mutation(refs.scansConfirm, { ...args, closetCode }),
+  deleteScan: async (scanId) => {
+    await liveClient().mutation(refs.privacyDeleteScan, { scanId, closetCode });
+  },
   setStatus: (args) => liveClient().mutation(refs.closetSetStatus, { ...args, closetCode }),
   markWashed: (args = {}) => liveClient().mutation(refs.closetMarkWashed, { ...args, closetCode }),
   suggest: (args) => liveClient().action(refs.stylistSuggest, { ...args, closetCode }),
@@ -40,4 +46,4 @@ const liveApi: DataApi = {
 
 export const api: DataApi = IS_FIXTURE_MODE ? fixtureApi : liveApi;
 
-export const { generateUploadUrl, startScan, confirmScan, setStatus, markWashed } = api;
+export const { generateUploadUrl, startScan, confirmScan, deleteScan, setStatus, markWashed } = api;
