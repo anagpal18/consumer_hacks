@@ -115,9 +115,8 @@ const styles = StyleSheet.create({
   shoe: { width: 46, height: 18, borderRadius: 8, marginHorizontal: -3, borderWidth: 1, borderColor: 'rgba(0,0,0,0.18)' },
   tag: {
     position: 'absolute',
-    top: 120,
-    right: 12,
-    alignItems: 'flex-end',
+    top: 290,
+    left: 12,
     backgroundColor: Colors.mockSoft,
     borderRadius: Radius.sm,
     paddingHorizontal: 8,

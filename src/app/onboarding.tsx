@@ -129,7 +129,7 @@ export default function OnboardingScreen() {
                 color={Colors.inkSoft}
               />
             </View>
-            <View style={styles.grow}>
+            <View style={styles.tuneSteppers}>
               {ADJUSTMENTS.map((entry) => (
                 <Stepper
                   key={entry.key}
@@ -172,7 +172,8 @@ const styles = StyleSheet.create({
   presetLabel: { fontSize: 12, fontWeight: '600', color: Colors.ink, textAlign: 'center' },
   silhouette: { alignItems: 'center', gap: 2 },
   head: { width: 18, height: 18, borderRadius: 9 },
-  tuneRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  tunePreview: { width: 76, alignItems: 'center' },
+  tuneRow: { gap: Spacing.three },
+  tunePreview: { alignItems: 'center' },
+  tuneSteppers: { gap: Spacing.one },
   footer: { paddingHorizontal: Spacing.five, paddingTop: Spacing.three, gap: Spacing.one, borderTopWidth: 1, borderTopColor: Colors.line, backgroundColor: Colors.background },
 });

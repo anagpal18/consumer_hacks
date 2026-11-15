@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Mirror } from '@/components/Mirror';
@@ -243,11 +243,6 @@ export default function HomeScreen() {
             <Button label="Retry" compact variant="secondary" onPress={() => controls?.retry()} />
           </View>
         ) : null}
-        {profile?.avatarStatus === 'preparing' ? (
-          <View style={[styles.viewerStatus, { top: insets.top + 60 }]}>
-            <Text style={styles.viewerStatusText}>Preparing your avatar. Showing the demo avatar for now.</Text>
-          </View>
-        ) : null}
 
         {approximate.length > 0 ? (
           <View style={[styles.approximate, { top: insets.top + 170 }]}>
@@ -259,6 +254,12 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.banners} pointerEvents="box-none">
+          {profile?.avatarStatus === 'preparing' ? (
+            <View style={styles.banner}>
+              <Ionicons name="hourglass-outline" size={18} color={Colors.inkSoft} />
+              <Text style={styles.bannerText}>Preparing your avatar. Showing the demo avatar for now.</Text>
+            </View>
+          ) : null}
           {homeNotice ? (
             <Pressable style={[styles.banner, styles.bannerSuccess]} onPress={() => setSession({ homeNotice: null })}>
               <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
@@ -333,7 +334,6 @@ export default function HomeScreen() {
                   <Ionicons name="chevron-forward" size={14} color={Colors.accent} />
                 </Pressable>
               ) : null}
-              {api.usingMockData ? <MockBadge label="Sample" /> : null}
             </View>
 
             {selected ? (
@@ -374,7 +374,7 @@ export default function HomeScreen() {
               </Text>
             )}
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+            <View style={styles.chips}>
               {items.map((item) => {
                 const isLocked = locked.includes(item.itemId);
                 return (
@@ -387,8 +387,8 @@ export default function HomeScreen() {
                     onPress={() => setSelectedId(selectedId === item.itemId ? null : item.itemId)}
                     onLongPress={() => setLocked(isLocked ? locked.filter((id) => id !== item.itemId) : [...locked, item.itemId])}
                     style={[styles.chip, selectedId === item.itemId && styles.chipSelected, change?.newItemId === item.itemId && styles.chipNew]}>
-                    <GarmentThumb media={item.media} colorHex={item.colorHex} category={item.category} size={40} />
-                    <View>
+                    <GarmentThumb media={item.media} colorHex={item.colorHex} category={item.category} size={36} />
+                    <View style={styles.chipText}>
                       <Text style={styles.chipName} numberOfLines={1}>{item.name}</Text>
                       <Text style={[styles.chipMeta, change?.newItemId === item.itemId && { color: Colors.accent }]}>
                         {change?.newItemId === item.itemId ? 'Just changed' : isLocked ? 'Locked' : CATEGORY_LABEL[item.category]}
@@ -398,8 +398,13 @@ export default function HomeScreen() {
                   </Pressable>
                 );
               })}
-            </ScrollView>
-            {!selected && items.length > 0 ? <Text style={styles.hint}>Tap a piece to lock it, change it or send it to laundry.</Text> : null}
+            </View>
+            <View style={styles.hintRow}>
+              <Text style={styles.hint} numberOfLines={1}>
+                {selected ? 'Long press a piece to lock it quickly.' : 'Tap a piece to lock, change or launder it.'}
+              </Text>
+              {api.usingMockData ? <MockBadge label="Sample stylist" /> : null}
+            </View>
 
             <View style={styles.inputRow}>
               <TextInput
@@ -408,6 +413,7 @@ export default function HomeScreen() {
                 placeholder="Tell me your plans"
                 placeholderTextColor={Colors.muted}
                 returnKeyType="send"
+                autoCapitalize="none"
                 onSubmitEditing={() => suggest(prompt)}
                 testID="plans-input"
                 style={styles.input}
@@ -522,13 +528,17 @@ const styles = StyleSheet.create({
   reason: { fontSize: 14, lineHeight: 20, minHeight: 40, color: Colors.inkSoft },
   actions: { flexDirection: 'row', gap: Spacing.two },
   action: { flex: 1, paddingHorizontal: Spacing.two },
-  chips: { gap: Spacing.two, paddingRight: Spacing.four },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  chipText: { flex: 1 },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   chip: {
+    flexBasis: '47%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    padding: 6,
-    paddingRight: Spacing.three,
+    padding: 5,
+    paddingRight: Spacing.two,
     borderRadius: Radius.md,
     backgroundColor: Colors.surface,
     borderWidth: 1.5,
@@ -536,9 +546,9 @@ const styles = StyleSheet.create({
   },
   chipSelected: { borderColor: Colors.ink },
   chipNew: { borderColor: Colors.accent, backgroundColor: Colors.accentSoft },
-  chipName: { fontSize: 13, fontWeight: '600', color: Colors.ink, maxWidth: 130 },
+  chipName: { fontSize: 13, fontWeight: '600', color: Colors.ink },
   chipMeta: { fontSize: 11, color: Colors.muted },
-  hint: { fontSize: 12, color: Colors.muted },
+  hint: { flex: 1, fontSize: 12, color: Colors.muted },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   input: {
     flex: 1,

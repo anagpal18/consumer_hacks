@@ -108,7 +108,10 @@ export function GarmentThumb({ media, colorHex, category, size = 56, style }: Ga
   const hex = colorHex ?? Colors.surfaceSunken;
   return (
     <View style={[styles.swatch, { backgroundColor: hex }, box]}>
-      <Text style={[styles.swatchLabel, { color: isDark(hex) ? '#FFFFFF' : Colors.ink, fontSize: size < 50 ? 8 : 10 }]}>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={[styles.swatchLabel, { color: isDark(hex) ? '#FFFFFF' : Colors.ink, fontSize: size < 50 ? 7 : 10 }]}>
         {CATEGORY_LABEL[category].toUpperCase()}
       </Text>
     </View>
@@ -199,5 +202,5 @@ const styles = StyleSheet.create({
   },
   pillLabel: { fontSize: 11, fontWeight: '600' },
   swatch: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.line },
-  swatchLabel: { fontWeight: '700', letterSpacing: 0.5 },
+  swatchLabel: { fontWeight: '700', letterSpacing: 0.3, paddingHorizontal: 1 },
 });
