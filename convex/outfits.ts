@@ -4,9 +4,37 @@ import { mutation, query, type QueryCtx } from "./_generated/server";
 import { fail, findProfile, requireOwnedItem, requireProfile, WASH_AFTER } from "./lib";
 
 export const CHALLENGE_TARGET = 3;
+const DAY_MS = 86_400_000;
 
 export function outfitKey(itemIds: Id<"items">[]) {
   return [...new Set(itemIds)].sort().join(",");
+}
+
+export function streakFromTimes(times: number[], now: number, tzOffsetMinutes: number) {
+  const day = (t: number) => Math.floor((t + tzOffsetMinutes * 60_000) / DAY_MS);
+  const days = new Set(times.map(day));
+  let d = day(now);
+  if (!days.has(d)) d--;
+  let streak = 0;
+  while (days.has(d)) {
+    streak++;
+    d--;
+  }
+  return streak;
+}
+
+async function streakDays(ctx: QueryCtx, ownerId: Id<"profiles">, tzOffsetMinutes = 0) {
+  const logs = await ctx.db
+    .query("wearLogs")
+    .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
+    .order("desc")
+    .take(400);
+  return streakFromTimes(logs.map((l) => l.wornAt), Date.now(), tzOffsetMinutes);
+}
+
+async function visibleIds(ctx: QueryCtx, itemIds: Id<"items">[]) {
+  const items = await Promise.all(itemIds.map((id) => ctx.db.get(id)));
+  return items.filter((i): i is Doc<"items"> => !!i && !i.isPrivate).map((i) => i._id);
 }
 
 async function challengeFor(ctx: QueryCtx, ownerId: Id<"profiles">, itemIds: Id<"items">[]) {
@@ -33,6 +61,8 @@ export const confirmWear = mutation({
     requestId: v.string(),
     outfitId: v.optional(v.string()),
     occasion: v.optional(v.string()),
+    /** Minutes east of UTC for the streak's local day, e.g. -480 for Pacific standard time; the opposite sign of Date#getTimezoneOffset(). Defaults to 0 (UTC). */
+    tzOffsetMinutes: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const profile = await requireProfile(ctx, args.closetCode);
@@ -44,8 +74,9 @@ export const confirmWear = mutation({
     if (existing) {
       return {
         wear: savedWear(existing),
-        challenge: await challengeFor(ctx, profile._id, existing.itemIds),
+        challenge: await challengeFor(ctx, profile._id, await visibleIds(ctx, existing.itemIds)),
         washReminderItemIds: [] as Id<"items">[],
+        streakDays: await streakDays(ctx, profile._id, args.tzOffsetMinutes),
         duplicate: true,
       };
     }
@@ -60,7 +91,9 @@ export const confirmWear = mutation({
       items.push(item);
     }
     const now = Date.now();
-    const key = outfitKey(itemIds);
+    const styledIds = items.filter((i) => !i.isPrivate).map((i) => i._id);
+    const outfitIds = styledIds.length ? styledIds : itemIds;
+    const key = outfitKey(outfitIds);
     const outfit = await ctx.db
       .query("outfits")
       .withIndex("by_ownerId_and_key", (q) => q.eq("ownerId", profile._id).eq("key", key))
@@ -73,7 +106,7 @@ export const confirmWear = mutation({
       outfitDocId = await ctx.db.insert("outfits", {
         ownerId: profile._id,
         key,
-        itemIds: [...itemIds].sort(),
+        itemIds: [...outfitIds].sort(),
         wearCount: 1,
         lastWornAt: now,
       });
@@ -94,8 +127,9 @@ export const confirmWear = mutation({
     });
     return {
       wear: savedWear((await ctx.db.get(logId))!),
-      challenge: await challengeFor(ctx, profile._id, items.filter((i) => !i.isPrivate).map((i) => i._id)),
+      challenge: await challengeFor(ctx, profile._id, styledIds),
       washReminderItemIds,
+      streakDays: await streakDays(ctx, profile._id, args.tzOffsetMinutes),
       duplicate: false,
     };
   },
@@ -116,6 +150,19 @@ export const challenge = query({
       items.filter((i) => !i.isPrivate).map((i) => i._id),
     );
     return progress.filter((p) => p.distinctOutfits > 0);
+  },
+});
+
+export const streak = query({
+  args: {
+    closetCode: v.string(),
+    /** Minutes east of UTC, e.g. -480 for Pacific standard time; the opposite sign of Date#getTimezoneOffset(). Defaults to 0 (UTC). */
+    tzOffsetMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const profile = await findProfile(ctx, args.closetCode);
+    if (!profile) return { streakDays: 0 };
+    return { streakDays: await streakDays(ctx, profile._id, args.tzOffsetMinutes) };
   },
 });
 
