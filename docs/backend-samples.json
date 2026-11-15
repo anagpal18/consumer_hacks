@@ -1,0 +1,648 @@
+{
+  "scanReview": {
+    "attempts": 1,
+    "candidates": [
+      {
+        "candidateId": "j57dv2fg2096x2q5gjhrtsfqe18j8afr",
+        "category": "top",
+        "color": "black with red trim",
+        "colorHex": "#0b0b0b",
+        "confidence": 0.9,
+        "crop": {
+          "storageId": "kg23nsytdckg2n4n3swth1pafd8j95jg",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/5e2a1a38-d942-4f69-83ef-3a25a322bf12"
+        },
+        "cropBox": {
+          "h": 0.94,
+          "w": 0.9,
+          "x": 0.05,
+          "y": 0.03
+        },
+        "evidenceFrameIds": [
+          "f1"
+        ],
+        "frameId": "f1",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "t-shirt",
+        "suggestedName": "Black with red trim t-shirt",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j57bnt7t0x4tpxcgwmsvmzsjz58j8v73",
+        "category": "top",
+        "color": "black with gray graphic",
+        "colorHex": "#0b0b0b",
+        "confidence": 0.9,
+        "crop": {
+          "storageId": "kg203e1aavfwrhrghnfhjzmqcs8j9m5d",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/877c9fab-415f-4d6b-9ff3-3aefa94f2110"
+        },
+        "cropBox": {
+          "h": 0.92,
+          "w": 0.92,
+          "x": 0.04,
+          "y": 0.03
+        },
+        "evidenceFrameIds": [
+          "f2"
+        ],
+        "frameId": "f2",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "t-shirt",
+        "suggestedName": "Black with gray graphic t-shirt",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j5708crrdq0xjgeppssw1jvj3n8j810p",
+        "category": "top",
+        "color": "dark charcoal",
+        "colorHex": "#2b2b2b",
+        "confidence": 0.6,
+        "crop": {
+          "storageId": "kg20bdehdm2cw81nk4g3bv4sys8j97ek",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/3726375e-5bdc-4512-813a-84d9ffc2e113"
+        },
+        "cropBox": {
+          "h": 0.32,
+          "w": 0.9,
+          "x": 0.05,
+          "y": 0.05
+        },
+        "evidenceFrameIds": [
+          "f3"
+        ],
+        "frameId": "f3",
+        "isPrivate": false,
+        "possibleDuplicateOf": "j57dv2fg2096x2q5gjhrtsfqe18j8afr",
+        "similarTo": [
+          "j57dv2fg2096x2q5gjhrtsfqe18j8afr",
+          "j57bnt7t0x4tpxcgwmsvmzsjz58j8v73"
+        ],
+        "subtype": "t-shirt",
+        "suggestedName": "Dark charcoal t-shirt",
+        "uncertain": true,
+        "uncertainReason": "Could be same as another black tee shown in f1 or f2 (only a back label visible)."
+      },
+      {
+        "candidateId": "j5706mm389zc6er17ep01x90an8j8f0w",
+        "category": "outerwear",
+        "color": "light blue",
+        "colorHex": "#85a9c9",
+        "confidence": 0.98,
+        "crop": {
+          "storageId": "kg270nk3653e35gmmy9d32gac58j8fwf",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/c3b7c38d-0046-44e4-b79e-51c1b17e8793"
+        },
+        "cropBox": {
+          "h": 0.96,
+          "w": 0.96,
+          "x": 0.02,
+          "y": 0.02
+        },
+        "evidenceFrameIds": [
+          "f5",
+          "f11"
+        ],
+        "frameId": "f5",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "denim jacket",
+        "suggestedName": "Light blue denim jacket",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j576zqnc80dxygw4n2r8hwmv898j9z87",
+        "category": "shoes",
+        "color": "white",
+        "colorHex": "#f8f8f8",
+        "confidence": 0.95,
+        "crop": {
+          "storageId": "kg2f7j1qm318g14wtx0edtarad8j88k2",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/144ecaa2-a568-4f0c-a017-66ebdd2a4c4b"
+        },
+        "cropBox": {
+          "h": 0.72,
+          "w": 0.94,
+          "x": 0.03,
+          "y": 0.12
+        },
+        "evidenceFrameIds": [
+          "f6"
+        ],
+        "frameId": "f6",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "sneakers",
+        "suggestedName": "White sneakers",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j575xh9qr9k50cwrrxg4hq7eyh8j87k3",
+        "category": "socks",
+        "color": "red",
+        "colorHex": "#d14b3b",
+        "confidence": 0.9,
+        "crop": {
+          "storageId": "kg2b89kgy3nzw92zkggf56mzd58j82wy",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/d4032d5f-e1f3-43c5-979c-a3f13c484702"
+        },
+        "cropBox": {
+          "h": 0.64,
+          "w": 0.9,
+          "x": 0.05,
+          "y": 0.16
+        },
+        "evidenceFrameIds": [
+          "f7"
+        ],
+        "frameId": "f7",
+        "isPrivate": true,
+        "similarTo": [],
+        "subtype": "socks",
+        "suggestedName": "Red socks",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j57axdt7786wda89h7r2gaq83h8j93ha",
+        "category": "underwear",
+        "color": "red with multicolor print",
+        "colorHex": "#d9443f",
+        "confidence": 0.95,
+        "crop": {
+          "storageId": "kg26m5xwrbh4pac90rns52n1098j9rty",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/15782cfe-460f-4173-a07d-466f7fff3785"
+        },
+        "cropBox": {
+          "h": 0.84,
+          "w": 0.94,
+          "x": 0.03,
+          "y": 0.08
+        },
+        "evidenceFrameIds": [
+          "f8"
+        ],
+        "frameId": "f8",
+        "isPrivate": true,
+        "similarTo": [],
+        "subtype": "boxer briefs",
+        "suggestedName": "Red with multicolor print boxer briefs",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j5768s0h8te13hr2q397n5s47d8j9rsf",
+        "category": "bottom",
+        "color": "beige",
+        "colorHex": "#d7d0bb",
+        "confidence": 0.95,
+        "crop": {
+          "storageId": "kg26dr6yhpw283k3wf2r5ess5s8j8qwy",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/8450ef80-2df8-432a-9266-fb9217c39ffc"
+        },
+        "cropBox": {
+          "h": 0.94,
+          "w": 0.94,
+          "x": 0.03,
+          "y": 0.03
+        },
+        "evidenceFrameIds": [
+          "f9"
+        ],
+        "frameId": "f9",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "pants",
+        "suggestedName": "Beige pants",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j57b74gyrmtvwfqf1q8ds5bjp58j8386",
+        "category": "top",
+        "color": "washed black",
+        "colorHex": "#222226",
+        "confidence": 0.96,
+        "crop": {
+          "storageId": "kg28b908ppq2dpf5317gcj8cyx8j8hkf",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/003a680a-b9da-4fd8-ab39-a43cd6dbe689"
+        },
+        "cropBox": {
+          "h": 0.94,
+          "w": 0.94,
+          "x": 0.03,
+          "y": 0.02
+        },
+        "evidenceFrameIds": [
+          "f10"
+        ],
+        "frameId": "f10",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "hoodie",
+        "suggestedName": "Washed black hoodie",
+        "uncertain": false
+      },
+      {
+        "candidateId": "j571kf84xwymqhwqq571s07z0h8j9ab8",
+        "category": "bottom",
+        "color": "light gray",
+        "colorHex": "#9a9ea3",
+        "confidence": 0.6,
+        "crop": {
+          "storageId": "kg20gah113e1kbgbzqf7f18wf98j92zv",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/9bd76171-4ea6-4202-9525-ac756a9c5eb9"
+        },
+        "cropBox": {
+          "h": 0.78,
+          "w": 0.45,
+          "x": 0.02,
+          "y": 0.12
+        },
+        "evidenceFrameIds": [
+          "f4"
+        ],
+        "frameId": "f4",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "jeans",
+        "suggestedName": "Light gray jeans",
+        "uncertain": true,
+        "uncertainReason": "Partly cropped/mannequin; only visible in f4."
+      },
+      {
+        "candidateId": "j579qyyzyn8z9vgye0tgndwrkn8j9ap9",
+        "category": "bottom",
+        "color": "black",
+        "colorHex": "#0c0c0c",
+        "confidence": 0.6,
+        "crop": {
+          "storageId": "kg2b3a4gtyeznqdh5jzz45snhh8j9byt",
+          "url": "https://little-shrimp-172.convex.cloud/api/storage/81f5d27f-e485-4a8a-8514-8e95dea60082"
+        },
+        "cropBox": {
+          "h": 0.78,
+          "w": 0.46,
+          "x": 0.52,
+          "y": 0.12
+        },
+        "evidenceFrameIds": [
+          "f4"
+        ],
+        "frameId": "f4",
+        "isPrivate": false,
+        "similarTo": [],
+        "subtype": "jeans",
+        "suggestedName": "Black jeans",
+        "uncertain": true,
+        "uncertainReason": "Partly cropped/mannequin; only visible in f4."
+      }
+    ],
+    "createdAt": 1794780695637.161,
+    "elapsedMs": 69847,
+    "frames": [
+      {
+        "frameId": "f1",
+        "timestampMs": 0,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/5aeeb6af-584c-41e9-b73b-c6851b58c493"
+      },
+      {
+        "frameId": "f2",
+        "timestampMs": 1000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/881c5089-a010-4a4c-a7d5-b6e7dae60f60"
+      },
+      {
+        "frameId": "f3",
+        "timestampMs": 2000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/c2e772da-a93b-42a5-949a-723e7b08f42f"
+      },
+      {
+        "frameId": "f4",
+        "timestampMs": 3000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/bba98956-0035-44cd-946b-b96337340f74"
+      },
+      {
+        "frameId": "f5",
+        "timestampMs": 4000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/ee016915-2e7a-432d-b1c3-b6b2693cd9ed"
+      },
+      {
+        "frameId": "f6",
+        "timestampMs": 5000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/6b2b957e-9612-406e-8579-42ab5841bde0"
+      },
+      {
+        "frameId": "f7",
+        "timestampMs": 6000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/37fe601c-a371-490b-95e1-7b6bb79a7c1a"
+      },
+      {
+        "frameId": "f8",
+        "timestampMs": 7000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/6042bcbb-6270-443f-8d0a-b8ce733ec4d9"
+      },
+      {
+        "frameId": "f9",
+        "timestampMs": 8000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/f17b1992-ae1f-4425-8012-64c18015beb0"
+      },
+      {
+        "frameId": "f10",
+        "timestampMs": 9000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/c8c2c624-b27b-4183-ac1d-5c8d92ee72b6"
+      },
+      {
+        "frameId": "f11",
+        "timestampMs": 10000,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/bc996b8e-051c-49d0-a724-264d99865c6a"
+      }
+    ],
+    "model": "gpt-5-mini",
+    "progress": {
+      "framesDone": 11,
+      "framesTotal": 11
+    },
+    "scanId": "js755bgg5ew6wp2n68np9367jd8j83je",
+    "status": "review",
+    "note": "Real detection output from 11 web photos; captured after confirm, status shown as review."
+  },
+  "scanConfirmed": {
+    "createdCount": 0,
+    "itemIds": [
+      "j97emg6gsg7dajr9phtdd2vmwx8j8dke",
+      "j97d98jkq51barc5gt2hp94aj98j86j2",
+      "j978bt57c27zhsf7ejw63v48jh8j9cfn",
+      "j97cvdc75567grfx56d0n3pbgs8j8ndz",
+      "j9757jcvvaqdam1bdmk3v2a9hd8j84fz",
+      "j971kre0wrp7h9363grtzfj7v58j8z89",
+      "j977nn9sx6170q2xs4ab5rq5ts8j97cb",
+      "j97d3jvxrrgph9rwbf0pgj6ehn8j99vd",
+      "j976hhc7w9txndwfxwbmmgf1r98j9d0a",
+      "j97et08bdcfgqyxqzavn337td98j91z3",
+      "j976z4bhd36x7y2rqf7t082z458j9t2j"
+    ],
+    "scanId": "js755bgg5ew6wp2n68np9367jd8j83je",
+    "status": "confirmed"
+  },
+  "scanStartResult": {
+    "scanId": "js7fbz1wyeft4wv3244n9fkr3n8j8ma2",
+    "status": "queued"
+  },
+  "scanQueuedOrProcessing": {
+    "attempts": 1,
+    "candidates": [],
+    "createdAt": 1794780955045.9077,
+    "frames": [
+      {
+        "frameId": "f1",
+        "timestampMs": 0,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/b3614f26-5075-4d21-83e1-b7db6fc7a752"
+      }
+    ],
+    "progress": {
+      "framesDone": 0,
+      "framesTotal": 1
+    },
+    "scanId": "js7fbz1wyeft4wv3244n9fkr3n8j8ma2",
+    "status": "queued"
+  },
+  "scanFailed": {
+    "attempts": 1,
+    "candidates": [],
+    "createdAt": 1794780955045.9077,
+    "elapsedMs": 98,
+    "error": "Frame f1 is not a readable JPEG or PNG.",
+    "errorCode": "BAD_FRAME",
+    "frames": [
+      {
+        "frameId": "f1",
+        "timestampMs": 0,
+        "url": "https://little-shrimp-172.convex.cloud/api/storage/b3614f26-5075-4d21-83e1-b7db6fc7a752"
+      }
+    ],
+    "progress": {
+      "framesDone": 1,
+      "framesTotal": 1
+    },
+    "retryable": false,
+    "scanId": "js7fbz1wyeft4wv3244n9fkr3n8j8ma2",
+    "status": "failed"
+  },
+  "demoItemIds": {
+    "jacket_denim": "j97ccb2e3tbree73a7wq64754n8j9gty",
+    "shirt_white": "j97a4ab3ejfhyp8qxymj63spdh8j94bf",
+    "tee_black": "j976wkg6q3bnj7wnqeter0a57d8j93y6",
+    "trousers_charcoal": "j9774g76a5bbpa4f2j7m0469jd8j8nd7",
+    "chinos_khaki": "j974nga6dzcygxr6w4zjwr42zh8j8ztf",
+    "sneakers_white": "j973aac5bf0pkn8rw2s1abr3ax8j9pq5",
+    "boots_brown": "j973m0g63gbjs4rg503vtmaqbs8j92z6",
+    "socks_grey": "j97d3rq68e286vdb4ztrj334nx8j854h"
+  },
+  "closetList": [
+    {
+      "availability": "available",
+      "category": "outerwear",
+      "color": "indigo",
+      "colorHex": "#3F5878",
+      "isPrivate": false,
+      "itemId": "j97ccb2e3tbree73a7wq64754n8j9gty",
+      "media": {
+        "url": null
+      },
+      "name": "Denim jacket",
+      "renderAssetKey": "demo/jacket-denim",
+      "subtype": "denim jacket",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "top",
+      "color": "white",
+      "colorHex": "#F1EEE8",
+      "isPrivate": false,
+      "itemId": "j97a4ab3ejfhyp8qxymj63spdh8j94bf",
+      "media": {
+        "url": null
+      },
+      "name": "White oxford shirt",
+      "renderAssetKey": "demo/shirt-white",
+      "subtype": "oxford shirt",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "top",
+      "color": "black",
+      "colorHex": "#1E1E1E",
+      "isPrivate": false,
+      "itemId": "j976wkg6q3bnj7wnqeter0a57d8j93y6",
+      "media": {
+        "url": null
+      },
+      "name": "Black t-shirt",
+      "renderAssetKey": "demo/tee-black",
+      "subtype": "t-shirt",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "bottom",
+      "color": "charcoal",
+      "colorHex": "#3B3B40",
+      "isPrivate": false,
+      "itemId": "j9774g76a5bbpa4f2j7m0469jd8j8nd7",
+      "media": {
+        "url": null
+      },
+      "name": "Charcoal trousers",
+      "renderAssetKey": "demo/trousers-charcoal",
+      "subtype": "trousers",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "bottom",
+      "color": "khaki",
+      "colorHex": "#B49A72",
+      "isPrivate": false,
+      "itemId": "j974nga6dzcygxr6w4zjwr42zh8j8ztf",
+      "media": {
+        "url": null
+      },
+      "name": "Khaki chinos",
+      "subtype": "chinos",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "shoes",
+      "color": "white",
+      "colorHex": "#EDEAE4",
+      "isPrivate": false,
+      "itemId": "j973aac5bf0pkn8rw2s1abr3ax8j9pq5",
+      "media": {
+        "url": null
+      },
+      "name": "White sneakers",
+      "renderAssetKey": "demo/sneakers-white",
+      "subtype": "sneakers",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "shoes",
+      "color": "brown",
+      "colorHex": "#6B4630",
+      "isPrivate": false,
+      "itemId": "j973m0g63gbjs4rg503vtmaqbs8j92z6",
+      "media": {
+        "url": null
+      },
+      "name": "Brown leather boots",
+      "renderAssetKey": "demo/boots-brown",
+      "subtype": "boots",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    },
+    {
+      "availability": "available",
+      "category": "socks",
+      "color": "grey",
+      "colorHex": "#9A9A9A",
+      "isPrivate": true,
+      "itemId": "j97d3rq68e286vdb4ztrj334nx8j854h",
+      "media": {
+        "url": null
+      },
+      "name": "Grey crew socks",
+      "subtype": "crew socks",
+      "washReminder": false,
+      "wearCount": 0,
+      "wearsSinceWash": 0
+    }
+  ],
+  "suggest": {
+    "outfits": [
+      {
+        "itemIds": [
+          "j97ccb2e3tbree73a7wq64754n8j9gty",
+          "j97a4ab3ejfhyp8qxymj63spdh8j94bf",
+          "j9774g76a5bbpa4f2j7m0469jd8j8nd7",
+          "j973m0g63gbjs4rg503vtmaqbs8j92z6"
+        ],
+        "outfitId": "look_b2sypd",
+        "rank": 1,
+        "reason": "Smart-casual, warm enough for 14°C, polished and versatile for dinner."
+      },
+      {
+        "itemIds": [
+          "j97ccb2e3tbree73a7wq64754n8j9gty",
+          "j97a4ab3ejfhyp8qxymj63spdh8j94bf",
+          "j974nga6dzcygxr6w4zjwr42zh8j8ztf",
+          "j973m0g63gbjs4rg503vtmaqbs8j92z6"
+        ],
+        "outfitId": "look_l55684",
+        "rank": 2,
+        "reason": "Crisp shirt with chinos and boots—relaxed but put-together."
+      }
+    ],
+    "source": "model"
+  },
+  "suggestLockedUnavailable": {
+    "lockedUnavailableItemIds": [
+      "j973m0g63gbjs4rg503vtmaqbs8j92z6"
+    ],
+    "message": "Brown leather boots (laundry) is no longer available. Replace or unlock it.",
+    "outfits": [],
+    "source": "rules"
+  },
+  "suggestOneSlotRecompute": {
+    "outfits": [
+      {
+        "itemIds": [
+          "j97ccb2e3tbree73a7wq64754n8j9gty",
+          "j97a4ab3ejfhyp8qxymj63spdh8j94bf",
+          "j9774g76a5bbpa4f2j7m0469jd8j8nd7",
+          "j973aac5bf0pkn8rw2s1abr3ax8j9pq5"
+        ],
+        "outfitId": "look_4z4soq",
+        "rank": 1,
+        "reason": "Available pieces that work for dinner: denim jacket with white oxford shirt."
+      }
+    ],
+    "source": "fallback"
+  },
+  "markWashedAll": {
+    "items": [
+      {
+        "availability": "available",
+        "category": "shoes",
+        "color": "brown",
+        "colorHex": "#6B4630",
+        "isPrivate": false,
+        "itemId": "j973m0g63gbjs4rg503vtmaqbs8j92z6",
+        "media": {
+          "url": null
+        },
+        "name": "Brown leather boots",
+        "renderAssetKey": "demo/boots-brown",
+        "subtype": "boots",
+        "washReminder": false,
+        "wearCount": 0,
+        "wearsSinceWash": 0
+      }
+    ]
+  }
+}
