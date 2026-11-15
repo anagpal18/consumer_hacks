@@ -6,4 +6,5 @@ export { extractFrames, frameTimestamps, pickClip, scanClip, uploadFrames } from
 export type { PickedClip, ScanClipProgress } from './scanClip';
 export { fixtureStore } from './fixtures';
 export { outfitToMirrorProps } from './mirror';
+export type { Outfit, OutfitSwap, SuggestArgs, SuggestResult, WearArgs, WearResult } from './types';
 export type { GarmentSlot, MirrorGarment, OutfitMirrorProps } from './mirror';

@@ -3,20 +3,17 @@ import type {
   ClosetMarkWashedResult,
   ClosetSetStatusArgs,
   ClosetSetStatusResult,
-  ConfirmWearArgs,
-  ConfirmWearResult,
   ScanConfirmArgs,
   ScanConfirmResult,
   ScanStartArgs,
   ScanStartResult,
-  StylistSuggestArgs,
-  StylistSuggestResult,
 } from '@shared/contract';
 
 import { liveClient } from './client';
 import { fixtureApi } from './fixtures';
 import { CLOSET_CODE, IS_FIXTURE_MODE } from './mode';
 import { refs } from './refs';
+import type { SuggestArgs, SuggestResult, WearArgs, WearResult } from './types';
 
 /** Imperative calls. Reads go through the hooks so they stay reactive. */
 export type DataApi = {
@@ -25,8 +22,8 @@ export type DataApi = {
   confirmScan: (args: ScanConfirmArgs) => Promise<ScanConfirmResult>;
   setStatus: (args: ClosetSetStatusArgs) => Promise<ClosetSetStatusResult>;
   markWashed: (args?: ClosetMarkWashedArgs) => Promise<ClosetMarkWashedResult>;
-  suggest: (args: StylistSuggestArgs) => Promise<StylistSuggestResult>;
-  confirmWear: (args: ConfirmWearArgs) => Promise<ConfirmWearResult>;
+  suggest: (args: SuggestArgs) => Promise<SuggestResult>;
+  confirmWear: (args: WearArgs) => Promise<WearResult>;
 };
 
 const closetCode = CLOSET_CODE;
