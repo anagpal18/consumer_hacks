@@ -103,4 +103,4 @@ Run `demo:seed({ closetCode: "demo-closet" })` (already done on the deployment).
 
 - `npm run convex:deploy` pushes to the deployment. It needs `CONVEX_DEPLOY_KEY` (a dev key), or run `npx convex dev` while logged in.
 - `npm run test:convex` runs vitest with convex-test. `npm run typecheck:convex` typechecks the backend.
-- Secrets live only in the Convex env: `OPENAI_API_KEY` is required. Optional settings: `OPENAI_VISION_MODEL` (default `gpt-5-mini`), `OPENAI_VISION_EFFORT` (default `low`; `minimal` takes about 20 s but missed one of 11 pieces and silently merged two similar tees), `OPENAI_STYLIST_MODEL`.
+- Secrets live only in the Convex env: `OPENAI_API_KEY` is required. Optional, read at run time so they change without a redeploy: `DETECT_MODEL` (vision model), `DETECT_EFFORT` (default `low`), `DETECT_DETAIL` (default `high`), `OPENAI_STYLIST_MODEL`.

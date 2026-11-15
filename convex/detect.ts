@@ -7,7 +7,15 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import type { Category } from "./lib";
 
-export const VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-5-mini";
+const DEFAULT_MODEL = "gpt-5-mini";
+
+function detectConfig() {
+  return {
+    model: process.env.DETECT_MODEL || DEFAULT_MODEL,
+    effort: process.env.DETECT_EFFORT || "low",
+    detail: process.env.DETECT_DETAIL || "high",
+  };
+}
 const MODEL_TIMEOUT_MS = 240_000;
 const MODEL_MAX_SIDE = 1024;
 const CROP_MAX_SIDE = 512;
@@ -107,7 +115,7 @@ function iou(a: Detected["box"], b: Detected["box"]) {
   return union > 0 ? inter / union : 0;
 }
 
-async function callModel(content: unknown[]) {
+async function callModel(content: unknown[], config: ReturnType<typeof detectConfig>) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new ScanFailure("CONFIG", "Detection is not configured on the server (missing OpenAI key).", false);
   const controller = new AbortController();
@@ -119,8 +127,8 @@ async function callModel(content: unknown[]) {
       signal: controller.signal,
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: VISION_MODEL,
-        reasoning: { effort: process.env.OPENAI_VISION_EFFORT || "low" },
+        model: config.model,
+        reasoning: { effort: config.effort },
         instructions: PROMPT,
         input: [{ role: "user", content }],
         text: { format: { type: "json_schema", name: "closet_detection", strict: true, schema: DETECTION_SCHEMA } },
@@ -157,6 +165,7 @@ export const run = internalAction({
   handler: async (ctx, args) => {
     const job = await ctx.runMutation(internal.scans.beginProcessing, args);
     if (!job) return;
+    const config = detectConfig();
     try {
       const images = new Map<string, Awaited<ReturnType<typeof Jimp.read>>>();
       const content: unknown[] = [];
@@ -174,11 +183,11 @@ export const run = internalAction({
         if (Math.max(small.width, small.height) > MODEL_MAX_SIDE) small.scaleToFit({ w: MODEL_MAX_SIDE, h: MODEL_MAX_SIDE });
         const jpeg = await small.getBuffer("image/jpeg", { quality: 80 });
         content.push({ type: "input_text", text: `Frame ${f.frameId} at ${(f.timestampMs / 1000).toFixed(1)}s:` });
-        content.push({ type: "input_image", image_url: `data:image/jpeg;base64,${jpeg.toString("base64")}`, detail: "high" });
+        content.push({ type: "input_image", image_url: `data:image/jpeg;base64,${jpeg.toString("base64")}`, detail: config.detail });
       }
       content.push({ type: "input_text", text: `Frame ids: ${job.frames.map((f) => f.frameId).join(", ")}. List the distinct garments.` });
 
-      const result = await callModel(content);
+      const result = await callModel(content, config);
       const frameIds = new Set(job.frames.map((f) => f.frameId));
       const kept: Detected[] = [];
       const indexMap = new Map<number, number>();
@@ -233,7 +242,7 @@ export const run = internalAction({
           similarToIndexes,
         });
       }
-      await ctx.runMutation(internal.scans.saveCandidates, { scanId: args.scanId, attempt: args.attempt, model: VISION_MODEL, candidates });
+      await ctx.runMutation(internal.scans.saveCandidates, { scanId: args.scanId, attempt: args.attempt, model: config.model, candidates });
     } catch (e) {
       const failure =
         e instanceof ScanFailure ? e : new ScanFailure("INTERNAL", "Something went wrong while reading the frames. Try again.", true);
