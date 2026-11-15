@@ -4,7 +4,7 @@ Owner: Shresth. Deployment: shared **dev** deployment `little-shrimp-172`.
 
 ## Connect the app
 
-1. `cp .env.example .env.local`. It sets `EXPO_PUBLIC_CONVEX_URL=https://little-shrimp-172.convex.cloud` and `EXPO_PUBLIC_CLOSET_CODE=demo-closet`.
+1. `cp .env.example .env.local`. It sets `EXPO_PUBLIC_CONVEX_URL=https://little-shrimp-172.convex.cloud`. Replace the `EXPO_PUBLIC_CLOSET_CODE` placeholder with the real closet code, which is long and random and shared out of band. It never goes in the repo.
 2. Wrap the root layout in `src/app/_layout.tsx`:
    ```tsx
    import { ConvexClientProvider } from '@/lib/convex';
@@ -17,7 +17,7 @@ Owner: Shresth. Deployment: shared **dev** deployment `little-shrimp-172`.
 
 ## Session and ownership (demo identity)
 
-There is no login. Every function takes `closetCode: string` (4 to 64 characters from `[A-Za-z0-9_-]`). The server maps it to a `profiles` row and derives ownership from that row. Every scan, candidate, item, wear and uploaded file is checked against it. Two phones that use the same code share one closet. This is the only deviation from `shared/contract.ts`, which has no session argument: add `closetCode` to every call.
+There is no login. Every function takes `closetCode: string` (4 to 64 characters from `[A-Za-z0-9_-]`), which the app reads from `EXPO_PUBLIC_CLOSET_CODE`. The code acts as the closet's password, so keep it long and random. The server maps it to a `profiles` row and derives ownership from that row. Every scan, candidate, item, wear and uploaded file is checked against it. Two phones that use the same code share one closet. This is the only deviation from `shared/contract.ts`, which has no session argument: add `closetCode` to every call.
 
 - `profiles:join({ closetCode })` creates the closet if needed. The provider calls it on mount.
 - Storage ids are claimed by the first closet that uses them in `scans:start` or `closet:addItem`. Any other closet that uses them gets `FORBIDDEN`.
@@ -73,8 +73,9 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 | `outfits:confirmWear` | `itemIds, requestId, outfitId?, occasion?, tzOffsetMinutes?` | `{ wear{wearId, itemIds, wornAt, requestId, outfitId}, challenge[{itemId, distinctOutfits, target: 3, completed}], washReminderItemIds, streakDays, duplicate }` |
 | `outfits:streak` (query) | `tzOffsetMinutes?` | `{ streakDays }` |
 | `outfits:challenge` / `outfits:recentWears` (queries) | | challenge progress / last 20 wears |
+| `privacy:deleteScan` | `scanId` | `{ deleted: true, scanId, deletedCandidates, deletedFiles, keptItemPhotos }`: deletes the scan's frames, clip, unused crops and candidates, and keeps the photos of items already confirmed |
 | `demo:seed` | | the 8 demo items (idempotent) |
-| `demo:reset` | code must start with `demo` | deletes items, wears and outfits |
+| `demo:reset` | code must start with `demo` | deletes items, wears, outfits, scans, candidates and uploaded files |
 
 **Stylist rules:** looks are built only from available, non-private items you own: top + bottom or a dress, plus shoes, with optional outerwear. Locked items stay in every look. You get two ranked looks whenever two valid looks exist. The model only ranks valid combinations, and every look it returns is checked against them, so it can't invent an ID. `source` is `model`, `fallback` (the model was needed but failed or timed out, so a deterministic look was returned) or `rules` (no model was needed: a single look, a swap, or the replace-or-unlock state). If a locked item is not available, you get `outfits: []`, `lockedUnavailableItemIds` and a `message`, and the UI should offer **Replace** or **Unlock**.
 
@@ -86,7 +87,7 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 
 ## Demo closet
 
-Run `demo:seed({ closetCode: "demo-closet" })` (already done on the deployment). These are the IDs on `little-shrimp-172`:
+`demo:seed({ closetCode })` has already been run on `little-shrimp-172` for the shared demo closet (code shared out of band). These are its item IDs:
 
 | demoKey | itemId | renderAssetKey |
 |---|---|---|

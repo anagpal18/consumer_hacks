@@ -37,6 +37,6 @@ export const deleteScan = mutation({
       }
     }
     await ctx.db.delete("scans", scan._id);
-    return { scanId: scan._id, deletedCandidates, deletedFiles, keptItemPhotos: keptPhotos.size };
+    return { deleted: true as const, scanId: scan._id, deletedCandidates, deletedFiles, keptItemPhotos: keptPhotos.size };
   },
 });

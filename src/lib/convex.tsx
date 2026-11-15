@@ -8,14 +8,15 @@ export type { Id } from '../../convex/_generated/dataModel';
 
 const url = process.env.EXPO_PUBLIC_CONVEX_URL;
 
-/** Shared demo closet. Every phone with the same code sees and edits the same closet. */
-export const CLOSET_CODE = process.env.EXPO_PUBLIC_CLOSET_CODE || 'demo-closet';
+/** Shared demo closet, shared out of band. Every phone with the same code sees and edits the same closet. */
+export const CLOSET_CODE = process.env.EXPO_PUBLIC_CLOSET_CODE ?? '';
 
 export const convex = url ? new ConvexReactClient(url, { unsavedChangesWarning: false }) : null;
 
 function JoinCloset() {
   const join = useMutation(api.profiles.join);
   useEffect(() => {
+    if (!CLOSET_CODE) return console.warn('EXPO_PUBLIC_CLOSET_CODE is not set.');
     join({ closetCode: CLOSET_CODE }).catch((e) => console.warn('Could not join closet', e));
   }, [join]);
   return null;
