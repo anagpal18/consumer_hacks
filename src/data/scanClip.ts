@@ -8,12 +8,14 @@ import { generateUploadUrl, startScan } from './api';
 import { IS_FIXTURE_MODE } from './mode';
 
 export const DEFAULT_FRAME_COUNT = 10;
+const MIN_FRAMES = 3;
 const MAX_CLIP_SECONDS = 60;
 
 export type PickedClip = { uri: string; durationMs: number | null };
 
 export type ScanClipProgress =
   | { step: 'extracting' }
+  | { step: 'uploading-video'; reason: string }
   | { step: 'uploading'; done: number; total: number }
   | { step: 'starting' };
 
@@ -94,10 +96,27 @@ export async function uploadFrames(
   return uploaded;
 }
 
-/** Clip in, scan job out: extract frames, upload them, then call scans:start. Watch the job with useScan. */
+/**
+ * Clip in, scan job out: extract frames, upload them, then call scans:start. If extraction
+ * throws or yields fewer than 3 frames, uploads the whole clip instead and lets the
+ * server extract frames (scans:start with videoStorageId and no frames). Watch the job with useScan.
+ */
 export async function scanClip(clip: PickedClip, onProgress?: (progress: ScanClipProgress) => void): Promise<ScanStartResult> {
   onProgress?.({ step: 'extracting' });
-  const frames = await extractFrames(clip);
+  let frames: { uri: string; timestampMs: number }[] = [];
+  let fallbackReason: string | undefined;
+  try {
+    frames = await extractFrames(clip);
+    if (frames.length < MIN_FRAMES) fallbackReason = `Only ${frames.length} frames extracted`;
+  } catch (error) {
+    fallbackReason = error instanceof Error ? error.message : String(error);
+  }
+  if (fallbackReason) {
+    onProgress?.({ step: 'uploading-video', reason: fallbackReason });
+    const videoStorageId = IS_FIXTURE_MODE ? 'storage_fixture_video' : await uploadFile(clip.uri, 'video/mp4');
+    onProgress?.({ step: 'starting' });
+    return startScan({ frames: [], videoStorageId });
+  }
   const uploaded = await uploadFrames(frames, onProgress);
   onProgress?.({ step: 'starting' });
   return startScan({ frames: uploaded });
