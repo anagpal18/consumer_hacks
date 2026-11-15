@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as avatar from "../avatar.js";
+import type * as bodyPhotos from "../bodyPhotos.js";
 import type * as closet from "../closet.js";
 import type * as color from "../color.js";
 import type * as demo from "../demo.js";
@@ -29,6 +31,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  avatar: typeof avatar;
+  bodyPhotos: typeof bodyPhotos;
   closet: typeof closet;
   color: typeof color;
   demo: typeof demo;
