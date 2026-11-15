@@ -230,12 +230,62 @@ export type ConfirmWearResult = {
 // ready/error state and viewer controls out.
 // ---------------------------------------------------------------------------
 
+/** 'unspecified' renders the male body (the demo garments are menswear). */
+export type AvatarSex = 'female' | 'male' | 'unspecified';
+
+/** Resolved client-side to the mesh preset `${sex}-${preset}`, see AVATAR_PRESETS in shared/renderAssets.ts. */
+export type AvatarPreset = 'slim' | 'average' | 'broad';
+
+/** Each value is -1..1; 0 is the preset's own shape. The mirror clamps to what keeps garments clean. */
+export type AvatarProportions = {
+  head: number;
+  chest: number;
+  arms: number;
+  waist: number;
+  hips: number;
+  shoulders: number;
+};
+
+/** Body of the base mannequin. Matches the result of avatar:estimateBody. */
+export type AvatarBody = {
+  sex: AvatarSex;
+  preset: AvatarPreset;
+  /** #rrggbb skin color; null keeps the preset's default skin. */
+  skinTone: string | null;
+  /** Standing height; omitted keeps the preset's own height. */
+  heightCm?: number;
+  proportions: AvatarProportions;
+};
+
 export type AvatarRef = {
   kind: 'preset' | 'photo';
   /** Preset key or provider avatar id. */
   key: string;
   /** Shown as "Demo avatar" in the viewer when true. */
   demo?: boolean;
+  /** Body shape for the mannequin. Omitted renders the default male-average body. */
+  body?: AvatarBody;
+};
+
+// ---------------------------------------------------------------------------
+// avatar:estimateBody (Convex action; reads the onboarding photo server-side)
+// ---------------------------------------------------------------------------
+
+export type AvatarEstimateArgs = {
+  closetCode: string;
+  /** Convex storage id of the private full-body photo (uploaded through scans:generateUploadUrl). */
+  photoStorageId: string;
+  heightCm?: number;
+  /** When the user picked one; otherwise the model estimates it. */
+  sex?: AvatarSex;
+};
+
+export type AvatarEstimateResult = {
+  body: AvatarBody;
+  /** 0..1. 0.1 when the photo was unusable and an average body with all proportions 0 came back. */
+  confidence: number;
+  /** One short human-readable note, shown next to the estimate. */
+  notes: string;
 };
 
 export type MirrorState =
@@ -283,7 +333,42 @@ export type MirrorProps = {
 
 const noMedia: MediaRef = { url: null };
 
-export const SAMPLE_AVATAR: AvatarRef = { kind: 'preset', key: 'demo/avatar-a', demo: true };
+export const SAMPLE_AVATAR_BODY: AvatarBody = {
+  sex: 'male',
+  preset: 'average',
+  skinTone: null,
+  heightCm: 178,
+  proportions: { head: 0, chest: 0, arms: 0, waist: 0, hips: 0, shoulders: 0 },
+};
+
+export const SAMPLE_AVATAR: AvatarRef = { kind: 'preset', key: 'demo/avatar-a', demo: true, body: SAMPLE_AVATAR_BODY };
+
+export const SAMPLE_AVATAR_ESTIMATE_ARGS: AvatarEstimateArgs = {
+  closetCode: 'sample-closet',
+  photoStorageId: 'storage_sample_body_photo',
+  heightCm: 183,
+  sex: 'male',
+};
+
+/** Shape of a real avatar:estimateBody response, values copied from one test call. */
+export const SAMPLE_AVATAR_ESTIMATE_RESULT: AvatarEstimateResult = {
+  body: {
+    sex: 'male',
+    preset: 'average',
+    skinTone: '#d8a38c',
+    heightCm: 183,
+    proportions: { head: 0, chest: 0.2, arms: 0.1, waist: -0.2, hips: -0.1, shoulders: 0.3 },
+  },
+  confidence: 0.75,
+  notes: 'Sample estimate for UI work.',
+};
+
+/** What avatar:estimateBody returns when the photo is unusable. */
+export const SAMPLE_AVATAR_ESTIMATE_FALLBACK: AvatarEstimateResult = {
+  body: { sex: 'unspecified', preset: 'average', skinTone: null, proportions: { head: 0, chest: 0, arms: 0, waist: 0, hips: 0, shoulders: 0 } },
+  confidence: 0.1,
+  notes: 'Sample fallback: the photo was not usable.',
+};
 
 export const SAMPLE_SCAN_START_ARGS: ScanStartArgs = {
   frames: [

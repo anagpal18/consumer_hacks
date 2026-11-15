@@ -4,15 +4,22 @@ Static GLBs for the 3D mirror (src/components/Mirror.tsx). Licenses: LICENSES.md
 
 ## How they fit together
 
-- One avatar (`avatar-a.glb`) and one GLB per garment key. Every file was baked
-  from the same MakeHuman body in the same relaxed pose, in meters, Y up, so a
-  garment is placed by adding its scene as-is. No skinning is needed at runtime.
-- Each mesh carries a `_HIDE` vertex attribute: a bit field of the garments that
-  cover that vertex (bit = `MirrorAsset.bit` in src/mirror/assets.ts). The viewer
-  drops triangles whose three vertices are all covered by worn garments, so skin
-  and inner layers do not poke through outer layers. Layer order: body, shoes,
-  top, bottom (tucked), outerwear.
-- Total size is about 5 MB (textures 1024 px JPEG inside the GLBs).
+- One avatar (`avatar-a.glb`) and one GLB per garment key, all baked from MakeHuman
+  bodies in the same relaxed pose, in meters, Y up, so a garment is placed by adding
+  its scene as-is. No skinning at runtime.
+- Body shape is morph targets on every mesh (body, hair, eyes and each garment):
+  `preset:<sex>-<preset>` for the five presets other than the base `male-average`,
+  and `<proportion>:+` / `<proportion>:-` for head, chest, arms, waist, hips and
+  shoulders. Each was a full MakeHuman rebuild with the garments refitted, so
+  clothes follow the body. The viewer sets weights from `AvatarRef.body`; height is
+  a uniform scale. Female bodies swap to the female skin texture (carried on a hidden
+  `skin_female` swatch mesh) and the female hair mesh.
+- Each mesh carries a hide mask in COLOR_0.r (bits / 255): the garments covering
+  that vertex (bit = `MirrorAsset.bit` in src/mirror/assets.ts). The viewer drops
+  triangles whose three vertices are all covered by worn garments. Layer order:
+  body, shoes, top, bottom (tucked), outerwear.
+- Files are meshopt-compressed with gltfpack; the viewer decodes them with three's
+  MeshoptDecoder. Total about 6 MB.
 
 ## Key format (for convex/)
 
@@ -35,7 +42,7 @@ defensibly matches an entry; otherwise leave it unset and pass the item through
    blender -b --python assets/mirror/pipeline/build_avatar.py
    ```
 
-   then copy the GLBs here, add the key to shared/renderAssets.ts and its file and
+   then pack each GLB (`npx gltfpack -i in.glb -o out.glb -cc -kn -km -ke -vp 14`), copy them here, add the key to shared/renderAssets.ts and its file and
    bit (from out/meta.json) to src/mirror/assets.ts, and record the license in LICENSES.md.
 
 The viewer page itself lives in mirror-viewer/ and is bundled with

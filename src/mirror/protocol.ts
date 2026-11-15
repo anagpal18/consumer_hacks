@@ -20,8 +20,21 @@ export type ViewerGarment = {
   tint?: string;
 };
 
+/** Resolved body: every field maps directly onto morph weights, a texture and a scale. */
+export type ViewerBody = {
+  /** Key of AVATAR_PRESETS; the base mesh is male-average. */
+  meshPreset: string;
+  female: boolean;
+  /** Hex skin color, or null for the texture's own color. */
+  skinTone: string | null;
+  heightScale: number;
+  /** Already clamped, -1..1 per proportion key. */
+  proportions: Record<string, number>;
+};
+
 export type HostMessage =
   | { type: 'scene'; avatarId: string; avatarSrc: AssetSource | null; garments: ViewerGarment[] }
+  | { type: 'body'; body: ViewerBody }
   | { type: 'reset' }
   | { type: 'rotateTo'; yawDeg: number }
   | { type: 'zoom'; scale: number };

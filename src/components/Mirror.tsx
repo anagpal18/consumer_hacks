@@ -5,15 +5,33 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, MIRROR_ASSETS, TINT_TEMPLATES } from '@/mirror/assets';
 import { loadAssetSource } from '@/mirror/loadAsset';
 import { MirrorSurface, type MirrorSurfaceHandle } from '@/mirror/MirrorSurface';
-import type { HostMessage, ViewerGarment, ViewerMessage } from '@/mirror/protocol';
+import type { HostMessage, ViewerBody, ViewerGarment, ViewerMessage } from '@/mirror/protocol';
 import { VIEWER_HTML } from '@/mirror/viewerHtml.generated';
-import type { MirrorGarment, MirrorProps, MirrorState, MirrorViewerControls } from '@shared/contract';
-import type { RenderSlot } from '@shared/renderAssets';
+import type { AvatarBody, MirrorGarment, MirrorProps, MirrorState, MirrorViewerControls } from '@shared/contract';
+import { AVATAR_PRESETS, HEIGHT_RANGE_CM, PROPORTION_KEYS, UNSPECIFIED_SEX_RENDERS_AS, type RenderSlot } from '@shared/renderAssets';
 
 const READY_TIMEOUT_MS = 45000;
 const FALLBACK_TINT = '#8A8580';
 
 type Worn = Omit<ViewerGarment, 'src'> & { approximate?: string };
+
+/**
+ * Proportions are -1..1 in the contract; the morphs were built at the clean limit,
+ * so the full range is safe and values are only clamped to it.
+ */
+function resolveBody(body: AvatarBody | undefined): ViewerBody {
+  const sex = !body || body.sex === 'unspecified' ? UNSPECIFIED_SEX_RENDERS_AS : body.sex;
+  const preset = AVATAR_PRESETS.find((p) => p.sex === sex && p.preset === (body?.preset ?? 'average')) ?? AVATAR_PRESETS[4];
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : 0));
+  const heightCm = body?.heightCm ? clamp(body.heightCm, HEIGHT_RANGE_CM.min, HEIGHT_RANGE_CM.max) : preset.naturalHeightCm;
+  return {
+    meshPreset: preset.key,
+    female: sex === 'female',
+    skinTone: body?.skinTone && /^#[0-9a-f]{6}$/i.test(body.skinTone) ? body.skinTone : null,
+    heightScale: heightCm / preset.naturalHeightCm,
+    proportions: Object.fromEntries(PROPORTION_KEYS.map((k) => [k, clamp(body?.proportions?.[k] ?? 0, -1, 1)])),
+  };
+}
 
 /** One entry per slot; a later garment for the same slot replaces an earlier one. */
 function resolveOutfit(garmentAssetKeys: string[], garments: MirrorGarment[] | undefined) {
@@ -56,6 +74,8 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
   const showDemoLabel = avatar.demo || avatarKey !== avatar.key;
   const keysSignature = garmentAssetKeys.join('|');
   const garmentsSignature = JSON.stringify(garments ?? null);
+  const bodySignature = JSON.stringify(avatar.body ?? null);
+  const viewerBody = useMemo(() => resolveBody(JSON.parse(bodySignature) ?? undefined), [bodySignature]);
   const outfit = useMemo(
     () => resolveOutfit(keysSignature ? keysSignature.split('|') : [], JSON.parse(garmentsSignature) ?? undefined),
     [keysSignature, garmentsSignature],
@@ -115,6 +135,7 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
       if (msg.type === 'booted') {
         booted.current = true;
         onControlsReady?.(controls);
+        send({ type: 'body', body: viewerBody });
         pushScene();
       } else if (msg.status === 'error') {
         sent.current = new Set();
@@ -123,12 +144,16 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
         report({ status: msg.status });
       }
     },
-    [controls, onControlsReady, pushScene, report],
+    [controls, onControlsReady, pushScene, report, send, viewerBody],
   );
 
   useEffect(() => {
     if (booted.current) pushScene();
   }, [pushScene]);
+
+  useEffect(() => {
+    if (booted.current) send({ type: 'body', body: viewerBody });
+  }, [send, viewerBody]);
 
   useEffect(() => {
     if (state.status !== 'loading') return;
