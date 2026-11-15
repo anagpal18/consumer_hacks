@@ -275,6 +275,27 @@ describe("outfits:confirmWear", () => {
     expect((await update({ category: "socks", isPrivate: false })).isPrivate).toBe(false);
   });
 
+  test("deleting a scanned item drops it from the scan's confirmedItemIds", async () => {
+    const t = convexTest(schema, modules);
+    await t.mutation(api.profiles.join, { closetCode: A });
+    const { scanId, candidates } = await t.run(async (ctx) => {
+      const profile = (await ctx.db.query("profiles").withIndex("by_closetCode", (q) => q.eq("closetCode", A)).unique())!;
+      const storageId = await ctx.storage.store(new Blob(["x"], { type: "image/jpeg" }));
+      const scanId = await ctx.db.insert("scans", { ownerId: profile._id, status: "review", frames: [{ frameId: "f1", storageId, timestampMs: 0 }], attempts: 1 });
+      const base = { ownerId: profile._id, scanId, attempt: 1, frameId: "f1", evidenceFrameIds: ["f1"], cropBox: { x: 0, y: 0, w: 1, h: 1 }, confidence: 0.9, uncertain: false, similarToIndexes: [], isPrivate: false, subtype: "t-shirt", color: "black" };
+      const c1 = await ctx.db.insert("candidates", { ...base, index: 0, category: "top" });
+      const c2 = await ctx.db.insert("candidates", { ...base, index: 1, category: "bottom", subtype: "jeans" });
+      return { scanId, candidates: [c1, c2] };
+    });
+    const { itemIds } = await t.mutation(api.scans.confirm, { closetCode: A, scanId, acceptedCandidateIds: candidates, edits: [] });
+    expect(itemIds).toHaveLength(2);
+    await t.mutation(api.closet.deleteItem, { closetCode: A, itemId: itemIds[0] as Id<"items"> });
+    const scan = await t.query(api.scans.get, { closetCode: A, scanId });
+    expect(scan.confirmedItemIds).toEqual([itemIds[1]]);
+    expect(scan.candidates.some((c) => (c as { itemId?: string }).itemId === itemIds[0])).toBe(false);
+    expect(await t.query(api.closet.list, { closetCode: A })).toHaveLength(1);
+  });
+
   test("items from another closet are rejected", async () => {
     const t = convexTest(schema, modules);
     const ids = await seed(t);

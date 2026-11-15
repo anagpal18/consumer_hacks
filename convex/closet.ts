@@ -153,6 +153,10 @@ export const deleteItem = mutation({
         await ctx.storage.delete(item.photoStorageId);
       }
     }
+    if (item.sourceCandidateId) {
+      const candidate = await ctx.db.get(item.sourceCandidateId);
+      if (candidate?.itemId === item._id) await ctx.db.patch("candidates", candidate._id, { itemId: undefined });
+    }
     await ctx.db.delete("items", item._id);
     return null;
   },
