@@ -1,12 +1,13 @@
 "use node";
 
 import { Jimp } from "jimp";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import { dominantHex } from "./color";
 import type { Category } from "./lib";
+import { extractFramesFromVideo } from "./video";
 
 const DEFAULT_MODEL = "gpt-5-mini";
 
@@ -169,9 +170,15 @@ export const run = internalAction({
     const config = detectConfig();
     const tStart = Date.now();
     try {
+      let frames = job.frames;
+      if (frames.length === 0 && job.videoStorageId) {
+        frames = await extractFramesFromVideo(ctx, job.videoStorageId);
+        console.log("detect extract ms", Date.now() - tStart, "frames", frames.length);
+        await ctx.runMutation(internal.scans.setFrames, { scanId: args.scanId, attempt: args.attempt, frames });
+      }
       const content: unknown[] = [];
       const decodes = new Map<string, Promise<Img>>();
-      for (const f of job.frames) {
+      for (const f of frames) {
         const blob = await ctx.storage.get(f.storageId);
         if (!blob) throw new ScanFailure("BAD_FRAME", `Frame ${f.frameId} is missing from storage. Upload the frames again.`, false);
         const bytes = Buffer.from(await blob.arrayBuffer());
@@ -187,7 +194,7 @@ export const run = internalAction({
       }
       const decoded = Promise.all([...decodes].map(async ([id, p]) => [id, await p] as const));
       decoded.catch(() => {});
-      content.push({ type: "input_text", text: `Frame ids: ${job.frames.map((f) => f.frameId).join(", ")}. List the distinct garments.` });
+      content.push({ type: "input_text", text: `Frame ids: ${frames.map((f) => f.frameId).join(", ")}. List the distinct garments.` });
 
       const tModel = Date.now();
       console.log("detect prep ms", tModel - tStart);
@@ -197,7 +204,7 @@ export const run = internalAction({
       });
       console.log("detect model ms", Date.now() - tModel);
       const images = new Map(await decoded);
-      const frameIds = new Set(job.frames.map((f) => f.frameId));
+      const frameIds = new Set(frames.map((f) => f.frameId));
       const kept: Detected[] = [];
       const indexMap = new Map<number, number>();
       result.items.forEach((d, i) => {
@@ -257,8 +264,12 @@ export const run = internalAction({
       await ctx.runMutation(internal.scans.saveCandidates, { scanId: args.scanId, attempt: args.attempt, model: config.model, candidates });
     } catch (e) {
       const failure =
-        e instanceof ScanFailure ? e : new ScanFailure("INTERNAL", "Something went wrong while reading the frames. Try again.", true);
-      if (!(e instanceof ScanFailure)) console.error("scan failed", e);
+        e instanceof ScanFailure
+          ? e
+          : e instanceof ConvexError
+            ? new ScanFailure(e.data.code, e.data.message, e.data.retryable ?? true)
+            : new ScanFailure("INTERNAL", "Something went wrong while reading the frames. Try again.", true);
+      if (!(e instanceof ScanFailure) && !(e instanceof ConvexError)) console.error("scan failed", e);
       await ctx.runMutation(internal.scans.markFailed, {
         scanId: args.scanId,
         attempt: args.attempt,

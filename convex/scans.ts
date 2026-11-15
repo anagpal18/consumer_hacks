@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
-import { category, cropBox, scanError } from "./schema";
+import { category, cropBox, frame, scanError } from "./schema";
 import {
   checkClosetCode,
   claimMedia,
@@ -63,8 +63,8 @@ export const start = mutation({
   },
   handler: async (ctx, args) => {
     const profile = await ensureProfile(ctx, args.closetCode);
-    if (args.frames.length === 0) {
-      fail("NEEDS_FRAMES", "Send 1-16 extracted frames with timestamps; clip-only scans are not supported yet.");
+    if (args.frames.length === 0 && !args.videoStorageId) {
+      fail("NEEDS_FRAMES", "Send 1-16 extracted frames with timestamps, or a videoStorageId for server-side extraction.");
     }
     if (args.frames.length > MAX_FRAMES) fail("TOO_MANY_FRAMES", `Send at most ${MAX_FRAMES} frames.`);
     for (const f of args.frames) await claimMedia(ctx, profile._id, f.storageId, "frame");
@@ -238,7 +238,19 @@ export const beginProcessing = internalMutation({
     const scan = await ctx.db.get(args.scanId);
     if (!scan || scan.attempts !== args.attempt || scan.status !== "queued") return null;
     await ctx.db.patch("scans", scan._id, { status: "processing", processingStartedAt: Date.now() });
-    return { ownerId: scan.ownerId, frames: scan.frames };
+    return { ownerId: scan.ownerId, frames: scan.frames, videoStorageId: scan.videoStorageId };
+  },
+});
+
+export const setFrames = internalMutation({
+  args: { scanId: v.id("scans"), attempt: v.number(), frames: v.array(frame) },
+  handler: async (ctx, args) => {
+    const scan = await ctx.db.get(args.scanId);
+    if (!scan || scan.attempts !== args.attempt) return;
+    for (const f of args.frames) {
+      await ctx.db.insert("media", { ownerId: scan.ownerId, storageId: f.storageId, kind: "frame", contentType: "image/jpeg" });
+    }
+    await ctx.db.patch("scans", scan._id, { frames: args.frames });
   },
 });
 
