@@ -38,7 +38,7 @@ Add packages with `npx expo install <package>` so versions match the Expo SDK.
 
 Everything screens need from the backend goes through `@/data`, typed by `shared/contract.ts`. Convex functions are called by string path (`refs.ts`), so the app compiles before `convex/` exists.
 
-**One switch.** `EXPO_PUBLIC_DATA_MODE` in `.env.local` picks the backend. `fixture` (the default) runs an in-memory store seeded from the `SAMPLE_*` payloads: laundry, wash, wear and scan changes stick until the app reloads, so flows can be demoed end to end. `live` talks to `EXPO_PUBLIC_CONVEX_URL`. While `IS_FIXTURE_MODE` is true, screens must show `FIXTURE_LABEL` ("Sample data").
+**One switch.** `EXPO_PUBLIC_DATA_MODE` in `.env.local` picks the backend. `fixture` (the default) runs an in-memory store seeded from the `SAMPLE_*` payloads: laundry, wash, wear and scan changes stick until the app reloads, so flows can be demoed end to end. `live` talks to `EXPO_PUBLIC_CONVEX_URL` and adds `closetCode` (`EXPO_PUBLIC_CLOSET_CODE`, default `demo-closet`) to every call; `DataProvider` calls `profiles:join` on mount. Phones with the same code share one closet. While `IS_FIXTURE_MODE` is true, screens must show `FIXTURE_LABEL` ("Sample data").
 
 ```bash
 cp .env.example .env.local   # then restart npx expo start; set EXPO_PUBLIC_DATA_MODE=live once convex/ is deployed
@@ -53,6 +53,7 @@ cp .env.example .env.local   # then restart npx expo start; set EXPO_PUBLIC_DATA
 | `useConfirmWear()` | `{ confirmWear(args), isSaving, error, lastResult }` | `outfits:confirmWear`. Mints one `requestId` per tap; overlapping taps and retries after a failure reuse it. Disable the button while `isSaving`. |
 | `setStatus(args)`, `markWashed(args?)` | `Promise` | `closet:setStatus`, `closet:markWashed` (omit args for bulk Laundry done). |
 | `startScan(args)`, `confirmScan(args)` | `Promise` | `scans:start`, `scans:confirm`. |
+| `outfitToMirrorProps(avatar, items)` | `{ avatar, garments, garmentAssetKeys }` | Outfit items to Mirror props, socks and underwear skipped. `useTodaysLook().mirrorProps` returns it. |
 | `pickClip(source)`, `scanClip(clip, onProgress?)` | `Promise` | Pick or record a video, extract 10 evenly spaced frames (`expo-video` `generateThumbnailsAsync`), upload each via `scans:generateUploadUrl`, then call `scans:start`. Watch the result with `useScan`. Native only. |
 
 Function kinds assumed for Shresth: `stylist:suggest` is an action; `scans:get` and `closet:list` are queries; everything else is a mutation. `wearagain://scan-check` opens an integration screen that runs the clip-to-frames path on a device.
