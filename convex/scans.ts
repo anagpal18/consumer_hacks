@@ -15,6 +15,7 @@ import {
   requireOwnedScan,
   requireProfile,
 } from "./lib";
+import { matchRenderAsset } from "./renderAssets";
 
 const STUCK_AFTER_MS = 5 * 60 * 1000;
 
@@ -212,7 +213,8 @@ export const confirm = mutation({
           category: cat,
           subtype,
           color,
-          colorHex: e?.color ? undefined : c.colorHex,
+          colorHex: c.colorHex,
+          renderAssetKey: matchRenderAsset({ category: cat, subtype, colorHex: c.colorHex }),
           photoStorageId: c.cropStorageId,
           availability: "available",
           wearCount: 0,

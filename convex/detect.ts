@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
+import { dominantHex } from "./color";
 import type { Category } from "./lib";
 
 const DEFAULT_MODEL = "gpt-5-mini";
@@ -35,7 +36,6 @@ const DETECTION_SCHEMA = {
           "category",
           "subtype",
           "color",
-          "colorHex",
           "frameId",
           "box",
           "alsoSeenIn",
@@ -48,7 +48,6 @@ const DETECTION_SCHEMA = {
           category: { type: "string", enum: CATEGORIES },
           subtype: { type: "string", description: "Plain garment type, e.g. 't-shirt', 'jeans', 'sneakers'. No brand or fabric guesses." },
           color: { type: "string", description: "Main color in one or two plain words." },
-          colorHex: { type: "string", description: "Approximate main color as #RRGGBB." },
           frameId: { type: "string", description: "Id of the frame with the clearest view of this piece." },
           box: {
             type: "object",
@@ -83,7 +82,6 @@ type Detected = {
   category: Category;
   subtype: string;
   color: string;
-  colorHex: string;
   frameId: string;
   box: { x: number; y: number; w: number; h: number };
   alsoSeenIn: string[];
@@ -114,6 +112,8 @@ function iou(a: Detected["box"], b: Detected["box"]) {
   const union = a.w * a.h + b.w * b.h - inter;
   return union > 0 ? inter / union : 0;
 }
+
+type Img = Awaited<ReturnType<typeof Jimp.read>>;
 
 async function callModel(content: unknown[], config: ReturnType<typeof detectConfig>) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -167,7 +167,7 @@ export const run = internalAction({
     if (!job) return;
     const config = detectConfig();
     try {
-      const images = new Map<string, Awaited<ReturnType<typeof Jimp.read>>>();
+      const images = new Map<string, Img>();
       const content: unknown[] = [];
       for (const f of job.frames) {
         const blob = await ctx.storage.get(f.storageId);
@@ -220,6 +220,9 @@ export const run = internalAction({
         const y1 = Math.ceil(clamp(d.box.y + d.box.h + pad) * img.height);
         const crop = img.clone().crop({ x: x0, y: y0, w: Math.max(8, x1 - x0), h: Math.max(8, y1 - y0) });
         if (Math.max(crop.width, crop.height) > CROP_MAX_SIDE) crop.scaleToFit({ w: CROP_MAX_SIDE, h: CROP_MAX_SIDE });
+        const thumb = crop.clone();
+        thumb.scaleToFit({ w: 64, h: 64 });
+        const pixelHex = dominantHex(thumb.bitmap);
         const cropBuf = await crop.getBuffer("image/jpeg", { quality: 85 });
         const cropStorageId: Id<"_storage"> = await ctx.storage.store(new Blob([new Uint8Array(cropBuf)], { type: "image/jpeg" }));
         const similarToIndexes = [...new Set(d.similarTo.map((s) => indexMap.get(s)).filter((s): s is number => s !== undefined && s !== index))];
@@ -231,7 +234,7 @@ export const run = internalAction({
           category: d.category,
           subtype: d.subtype.trim().toLowerCase() || d.category,
           color: d.color.trim().toLowerCase(),
-          colorHex: /^#[0-9a-fA-F]{6}$/.test(d.colorHex) ? d.colorHex : undefined,
+          colorHex: pixelHex,
           cropBox: d.box,
           cropStorageId,
           confidence: d.confidence,
