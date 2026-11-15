@@ -30,6 +30,7 @@ export const refs = {
   scansGenerateUploadUrl: makeFunctionReference<'mutation', { closetCode: string }, ScanGenerateUploadUrlResult>('scans:generateUploadUrl'),
   scansStart: makeFunctionReference<'mutation', InCloset<ScanStartArgs>, ScanStartResult>('scans:start'),
   scansGet: makeFunctionReference<'query', InCloset<ScanGetArgs>, ScanJob | null>('scans:get'),
+  privacyDeleteScan: makeFunctionReference<'mutation', InCloset<ScanGetArgs>, unknown>('privacy:deleteScan'),
   scansConfirm: makeFunctionReference<'mutation', InCloset<ScanConfirmArgs>, ScanConfirmResult>('scans:confirm'),
   closetList: makeFunctionReference<'query', InCloset<ClosetListArgs>, ClosetListResult>('closet:list'),
   closetSetStatus: makeFunctionReference<'mutation', InCloset<ClosetSetStatusArgs>, ClosetSetStatusResult>('closet:setStatus'),

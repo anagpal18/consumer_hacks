@@ -15,7 +15,8 @@ export const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL;
 
 /**
  * Demo identity on the backend: every Convex function takes `closetCode`, and phones
- * with the same code share one closet. The adapter adds it to every live call, so
+ * with the same code share one closet. The code is the only credential for a closet, so
+ * it comes from the git-ignored .env.local and is never committed. The adapter adds it to every live call, so
  * screens keep using the shared/contract.ts shapes without it.
  */
-export const CLOSET_CODE = process.env.EXPO_PUBLIC_CLOSET_CODE || 'demo-closet';
+export const CLOSET_CODE = process.env.EXPO_PUBLIC_CLOSET_CODE ?? '';

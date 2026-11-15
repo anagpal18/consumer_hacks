@@ -38,7 +38,7 @@ Add packages with `npx expo install <package>` so versions match the Expo SDK.
 
 Everything screens need from the backend goes through `@/data`, typed by `shared/contract.ts`. Convex functions are called by string path (`refs.ts`), so the app compiles before `convex/` exists.
 
-**One switch.** `EXPO_PUBLIC_DATA_MODE` in `.env.local` picks the backend. `fixture` (the default) runs an in-memory store seeded from the `SAMPLE_*` payloads: laundry, wash, wear and scan changes stick until the app reloads, so flows can be demoed end to end. `live` talks to `EXPO_PUBLIC_CONVEX_URL` and adds `closetCode` (`EXPO_PUBLIC_CLOSET_CODE`, default `demo-closet`) to every call; `DataProvider` calls `profiles:join` on mount. Phones with the same code share one closet. While `IS_FIXTURE_MODE` is true, screens must show `FIXTURE_LABEL` ("Sample data").
+**One switch.** `EXPO_PUBLIC_DATA_MODE` in `.env.local` picks the backend. `fixture` (the default) runs an in-memory store seeded from the `SAMPLE_*` payloads: laundry, wash, wear and scan changes stick until the app reloads, so flows can be demoed end to end. `live` talks to `EXPO_PUBLIC_CONVEX_URL` and adds `closetCode` (`EXPO_PUBLIC_CLOSET_CODE`, required in live mode, put only in `.env.local`: it is the closet's only credential) to every call; `DataProvider` calls `profiles:join` on mount. Phones with the same code share one closet. While `IS_FIXTURE_MODE` is true, screens must show `FIXTURE_LABEL` ("Sample data").
 
 ```bash
 cp .env.example .env.local   # then restart npx expo start; set EXPO_PUBLIC_DATA_MODE=live once convex/ is deployed
@@ -48,13 +48,13 @@ cp .env.example .env.local   # then restart npx expo start; set EXPO_PUBLIC_DATA
 |---|---|---|
 | `useCloset(args?)` | `ClosetItem[] \| undefined` | Reactive `closet:list`; undefined while loading. Updates from any device in live mode. |
 | `useScan(scanId)` | `ScanJob \| null \| undefined` | Reactive `scans:get`; skipped while `scanId` is empty. |
-| `useStylistSuggest()` | `{ suggest(args), result, isLoading, error }` | `stylist:suggest` (action). Keeps the previous `result` while loading so the mirror stays stable. |
+| `useStylistSuggest()` | `{ suggest(args), result, isLoading, error }` | `stylist:suggest` (action). Keeps the previous `result` while loading so the mirror stays stable, always sends the outfit on screen as `currentItemIds`, and applies returned `swaps` in place so only the changed slot moves. |
 | `useTodaysLook(prompt?, lockedItemIds?)` | `{ outfit, items, garmentAssetKeys, lockedUnavailableItemIds, isLoading, error }` | Re-asks the stylist whenever an item's availability changes, keeping locked items. Home uses it to feed the Mirror. |
 | `useConfirmWear()` | `{ confirmWear(args), isSaving, error, lastResult }` | `outfits:confirmWear`. Mints one `requestId` per tap; overlapping taps and retries after a failure reuse it. Disable the button while `isSaving`. |
 | `setStatus(args)`, `markWashed(args?)` | `Promise` | `closet:setStatus`, `closet:markWashed` (omit args for bulk Laundry done). |
-| `startScan(args)`, `confirmScan(args)` | `Promise` | `scans:start`, `scans:confirm`. |
+| `startScan(args)`, `confirmScan(args)`, `deleteScan(scanId)` | `Promise` | `scans:start`, `scans:confirm`, `privacy:deleteScan`. |
 | `outfitToMirrorProps(avatar, items)` | `{ avatar, garments, garmentAssetKeys }` | Outfit items to Mirror props, socks and underwear skipped. `useTodaysLook().mirrorProps` returns it. |
-| `pickClip(source)`, `scanClip(clip, onProgress?)` | `Promise` | Pick or record a video, extract 10 evenly spaced frames (`expo-video` `generateThumbnailsAsync`), upload each via `scans:generateUploadUrl`, then call `scans:start`. Watch the result with `useScan`. Native only. |
+| `pickClip(source)`, `scanClip(clip, onProgress?)` | `Promise` | Pick or record a video, extract 10 evenly spaced frames (`expo-video` `generateThumbnailsAsync`), upload each via `scans:generateUploadUrl`, then call `scans:start`. Falls back to uploading the whole clip (`scans:start` with `videoStorageId`, no frames) when extraction fails or yields under 3 frames. Watch the result with `useScan`. Native only. |
 
 Function kinds assumed for Shresth: `stylist:suggest` is an action; `scans:get` and `closet:list` are queries; everything else is a mutation. `wearagain://scan-check` opens an integration screen that runs the clip-to-frames path on a device.
 
@@ -72,4 +72,4 @@ npx expo start --dev-client                               # then open the instal
 npx eas-cli@latest build --profile preview --platform ios                # standalone internal build for the demo
 ```
 
-EAS builds do not read `.env.local`. Add `EXPO_PUBLIC_DATA_MODE` and `EXPO_PUBLIC_CONVEX_URL` to the EAS `development` and `preview` environments (`npx eas-cli@latest env:create`) or the build falls back to fixture mode.
+EAS builds do not read `.env.local`. Add `EXPO_PUBLIC_DATA_MODE`, `EXPO_PUBLIC_CONVEX_URL` and `EXPO_PUBLIC_CLOSET_CODE` to the EAS `development` and `preview` environments (`npx eas-cli@latest env:create`) or the build falls back to fixture mode.
