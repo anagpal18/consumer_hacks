@@ -29,8 +29,6 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
 
 const scene = new THREE.Scene();
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -39,26 +37,31 @@ scene.environmentIntensity = 0.55;
 
 const key = new THREE.DirectionalLight(0xfff4e8, 2.2);
 key.position.set(1.6, 3.2, 2.6);
-key.castShadow = true;
-key.shadow.mapSize.set(1024, 1024);
-key.shadow.camera.left = -1;
-key.shadow.camera.right = 1;
-key.shadow.camera.top = 2.1;
-key.shadow.camera.bottom = -0.2;
-key.shadow.camera.near = 0.5;
-key.shadow.camera.far = 8;
-key.shadow.bias = -0.0004;
-key.shadow.normalBias = 0.02;
 scene.add(key);
 const rim = new THREE.DirectionalLight(0xdfe8ff, 1.1);
 rim.position.set(-2, 2.4, -2.5);
 scene.add(rim);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xb9a88f, 0.5));
 
-const floor = new THREE.Mesh(new THREE.CircleGeometry(0.9, 48), new THREE.ShadowMaterial({ opacity: 0.22 }));
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
+// Baked contact shadow: iOS WebGL in WKWebView rendered shadow maps as a solid disc.
+function contactShadow() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(40,30,20,0.42)');
+  grad.addColorStop(0.45, 'rgba(40,30,20,0.18)');
+  grad.addColorStop(1, 'rgba(40,30,20,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = 0.002;
+  return mesh;
+}
+scene.add(contactShadow());
 
 const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
 camera.position.set(0, TARGET.y + 0.15, BASE_DISTANCE);
@@ -156,15 +159,12 @@ function prepare(root: THREE.Object3D) {
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
     const mat = mesh.material as THREE.MeshStandardMaterial;
     if (ALPHA_CUTOUT.test(mat.name) || ALPHA_CUTOUT.test(mesh.name)) {
       mat.transparent = false;
       mat.alphaTest = /eyebrow/i.test(mat.name) ? 0.12 : 0.45;
       mat.depthWrite = true;
       mat.side = THREE.DoubleSide;
-      mesh.castShadow = false;
     } else if (!/skin|eye/i.test(mat.name)) {
       mat.side = THREE.DoubleSide;
     }
@@ -297,6 +297,7 @@ canvas.addEventListener('webglcontextlost', (e) => {
   e.preventDefault();
   post({ type: 'state', status: 'error', message: 'The 3D view was interrupted.' });
 });
+document.addEventListener('gesturestart', (e) => e.preventDefault());
 window.addEventListener('message', (e) => {
   if (typeof e.data === 'string' && e.data.startsWith('{')) receive(e.data);
 });
