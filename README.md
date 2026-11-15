@@ -33,3 +33,42 @@ Add packages with `npx expo install <package>` so versions match the Expo SDK.
 - No secrets in the repo. Keys stay in Convex or local `.env*.local` files, which are git-ignored.
 - Change `shared/contract.ts` in its own small commit and tell the other owners.
 - Sample data must be visibly labeled in the UI.
+
+## Data layer (`src/data/`)
+
+Everything screens need from the backend goes through `@/data`, typed by `shared/contract.ts`. Convex functions are called by string path (`refs.ts`), so the app compiles before `convex/` exists.
+
+**One switch.** `EXPO_PUBLIC_DATA_MODE` in `.env.local` picks the backend. `fixture` (the default) runs an in-memory store seeded from the `SAMPLE_*` payloads: laundry, wash, wear and scan changes stick until the app reloads, so flows can be demoed end to end. `live` talks to `EXPO_PUBLIC_CONVEX_URL`. While `IS_FIXTURE_MODE` is true, screens must show `FIXTURE_LABEL` ("Sample data").
+
+```bash
+cp .env.example .env.local   # then restart npx expo start; set EXPO_PUBLIC_DATA_MODE=live once convex/ is deployed
+```
+
+| Export | Shape | Notes |
+|---|---|---|
+| `useCloset(args?)` | `ClosetItem[] \| undefined` | Reactive `closet:list`; undefined while loading. Updates from any device in live mode. |
+| `useScan(scanId)` | `ScanJob \| null \| undefined` | Reactive `scans:get`; skipped while `scanId` is empty. |
+| `useStylistSuggest()` | `{ suggest(args), result, isLoading, error }` | `stylist:suggest` (action). Keeps the previous `result` while loading so the mirror stays stable. |
+| `useTodaysLook(prompt?, lockedItemIds?)` | `{ outfit, items, garmentAssetKeys, lockedUnavailableItemIds, isLoading, error }` | Re-asks the stylist whenever an item's availability changes, keeping locked items. Home uses it to feed the Mirror. |
+| `useConfirmWear()` | `{ confirmWear(args), isSaving, error, lastResult }` | `outfits:confirmWear`. Mints one `requestId` per tap; overlapping taps and retries after a failure reuse it. Disable the button while `isSaving`. |
+| `setStatus(args)`, `markWashed(args?)` | `Promise` | `closet:setStatus`, `closet:markWashed` (omit args for bulk Laundry done). |
+| `startScan(args)`, `confirmScan(args)` | `Promise` | `scans:start`, `scans:confirm`. |
+| `pickClip(source)`, `scanClip(clip, onProgress?)` | `Promise` | Pick or record a video, extract 10 evenly spaced frames (`expo-video` `generateThumbnailsAsync`), upload each via `scans:generateUploadUrl`, then call `scans:start`. Watch the result with `useScan`. Native only. |
+
+Function kinds assumed for Shresth: `stylist:suggest` is an action; `scans:get` and `closet:list` are queries; everything else is a mutation. `wearagain://scan-check` opens an integration screen that runs the clip-to-frames path on a device.
+
+## iOS builds (EAS)
+
+The app uses a development build (`expo-dev-client`) because `expo-video` thumbnails and the coming 3D renderer need native code. Bundle id: `com.wearagain.app`. Kenil runs, from the repo root:
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest init                                   # once: links the project and writes extra.eas.projectId to app.json
+npx eas-cli@latest device:create                          # once per physical iPhone (ad hoc provisioning)
+npx eas-cli@latest build --profile development --platform ios            # dev client for physical iPhones
+npx eas-cli@latest build --profile development-simulator --platform ios  # dev client for the iOS Simulator
+npx expo start --dev-client                               # then open the installed app and pick this server
+npx eas-cli@latest build --profile preview --platform ios                # standalone internal build for the demo
+```
+
+EAS builds do not read `.env.local`. Add `EXPO_PUBLIC_DATA_MODE` and `EXPO_PUBLIC_CONVEX_URL` to the EAS `development` and `preview` environments (`npx eas-cli@latest env:create`) or the build falls back to fixture mode.
