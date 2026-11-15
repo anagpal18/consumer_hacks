@@ -15,7 +15,7 @@ import {
   type PickedClip,
 } from '@/data';
 
-const SAMPLE_CLIP_URL = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+const SAMPLE_CLIP_URL = 'https://raw.githubusercontent.com/anagpal18/consumer_hacks/shresth-video/fixtures/closet-demo.mp4';
 
 /**
  * Integration check for the clip-to-frames path, opened with wearagain://scan-check
