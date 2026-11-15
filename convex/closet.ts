@@ -99,6 +99,7 @@ export const updateItem = mutation({
     const profile = await requireProfile(ctx, args.closetCode);
     await requireOwnedItem(ctx, profile._id, args.itemId);
     const { closetCode: _c, itemId, ...fields } = args;
+    if (fields.category && fields.isPrivate === undefined) fields.isPrivate = PRIVATE_CATEGORIES.includes(fields.category);
     await ctx.db.patch("items", itemId, fields);
     return await itemView(ctx, (await ctx.db.get(itemId))!);
   },
