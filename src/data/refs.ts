@@ -7,8 +7,6 @@ import type {
   ClosetMarkWashedResult,
   ClosetSetStatusArgs,
   ClosetSetStatusResult,
-  ConfirmWearArgs,
-  ConfirmWearResult,
   ScanConfirmArgs,
   ScanConfirmResult,
   ScanGenerateUploadUrlResult,
@@ -16,9 +14,9 @@ import type {
   ScanJob,
   ScanStartArgs,
   ScanStartResult,
-  StylistSuggestArgs,
-  StylistSuggestResult,
 } from '@shared/contract';
+
+import type { SuggestArgs, SuggestResult, WearArgs, WearResult } from './types';
 
 /** The backend scopes every call to a closet code (see CLOSET_CODE in mode.ts). */
 type InCloset<Args> = Args & { closetCode: string };
@@ -36,6 +34,6 @@ export const refs = {
   closetList: makeFunctionReference<'query', InCloset<ClosetListArgs>, ClosetListResult>('closet:list'),
   closetSetStatus: makeFunctionReference<'mutation', InCloset<ClosetSetStatusArgs>, ClosetSetStatusResult>('closet:setStatus'),
   closetMarkWashed: makeFunctionReference<'mutation', InCloset<ClosetMarkWashedArgs>, ClosetMarkWashedResult>('closet:markWashed'),
-  stylistSuggest: makeFunctionReference<'action', InCloset<StylistSuggestArgs>, StylistSuggestResult>('stylist:suggest'),
-  outfitsConfirmWear: makeFunctionReference<'mutation', InCloset<ConfirmWearArgs>, ConfirmWearResult>('outfits:confirmWear'),
+  stylistSuggest: makeFunctionReference<'action', InCloset<SuggestArgs>, SuggestResult>('stylist:suggest'),
+  outfitsConfirmWear: makeFunctionReference<'mutation', InCloset<WearArgs>, WearResult>('outfits:confirmWear'),
 };

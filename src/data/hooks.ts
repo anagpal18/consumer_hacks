@@ -5,12 +5,8 @@ import {
   SAMPLE_AVATAR,
   type ClosetItem,
   type ClosetListArgs,
-  type ConfirmWearArgs,
-  type ConfirmWearResult,
   type Id,
   type ScanJob,
-  type StylistSuggestArgs,
-  type StylistSuggestResult,
 } from '@shared/contract';
 
 import { api } from './api';
@@ -18,6 +14,7 @@ import { fixtureStore } from './fixtures';
 import { CLOSET_CODE, IS_FIXTURE_MODE } from './mode';
 import { outfitToMirrorProps } from './mirror';
 import { refs } from './refs';
+import type { Outfit, SuggestArgs, SuggestResult, WearArgs, WearResult } from './types';
 
 function useClosetFixture(args: ClosetListArgs = {}): ClosetItem[] | undefined {
   const closet = useSyncExternalStore(fixtureStore.subscribe, fixtureStore.getCloset);
@@ -44,23 +41,45 @@ function useScanLive(scanId: Id | null | undefined): ScanJob | null | undefined 
 /** Scan job status and candidates, undefined while loading or when scanId is empty, null when unknown. */
 export const useScan = IS_FIXTURE_MODE ? useScanFixture : useScanLive;
 
+/** Applies swaps to the look on screen, keeping its order, so only the swapped slots change. */
+function applySwaps(currentItemIds: Id[], outfit: Outfit): Outfit {
+  if (!outfit.swaps?.length) return outfit;
+  const swaps = new Map(outfit.swaps.map((swap) => [swap.from, swap.to]));
+  const itemIds = currentItemIds.flatMap((id) => {
+    const replacement = swaps.has(id) ? swaps.get(id) : id;
+    return replacement ? [replacement] : [];
+  });
+  const added = outfit.itemIds.filter((id) => !itemIds.includes(id));
+  return { ...outfit, itemIds: [...itemIds, ...added] };
+}
+
 /**
  * Calls stylist:suggest. The previous result stays in `result` while a new request
- * runs, so the mirror keeps the current outfit until the next one arrives.
+ * runs, so the mirror keeps the current outfit until the next one arrives. Unless the
+ * caller passes currentItemIds, the top cached outfit is sent as the current look, and
+ * returned swaps are applied to it so only the changed slot moves on the mirror.
  */
 export function useStylistSuggest() {
-  const [result, setResult] = useState<StylistSuggestResult>();
+  const [result, setResult] = useState<SuggestResult>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error>();
   const latest = useRef(0);
+  const shown = useRef<Id[] | undefined>(undefined);
 
-  const suggest = useCallback(async (args: StylistSuggestArgs) => {
+  const suggest = useCallback(async (args: SuggestArgs) => {
     const call = ++latest.current;
+    const currentItemIds = args.currentItemIds ?? shown.current;
     setIsLoading(true);
     setError(undefined);
     try {
-      const next = await api.suggest(args);
-      if (call === latest.current) setResult(next);
+      const response = await api.suggest({ ...args, currentItemIds });
+      const next = currentItemIds
+        ? { ...response, outfits: response.outfits.map((outfit) => applySwaps(currentItemIds, outfit)) }
+        : response;
+      if (call === latest.current) {
+        shown.current = next.outfits[0]?.itemIds ?? shown.current;
+        setResult(next);
+      }
       return next;
     } catch (cause) {
       if (call === latest.current) setError(cause instanceof Error ? cause : new Error(String(cause)));
@@ -85,17 +104,17 @@ function newRequestId() {
 export function useConfirmWear() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error>();
-  const [lastResult, setLastResult] = useState<ConfirmWearResult>();
+  const [lastResult, setLastResult] = useState<WearResult>();
   const pending = useRef<{ key: string; requestId: string } | null>(null);
 
-  const confirmWear = useCallback(async (args: Omit<ConfirmWearArgs, 'requestId'>) => {
+  const confirmWear = useCallback(async (args: Omit<WearArgs, 'requestId' | 'tzOffsetMinutes'>) => {
     const key = [...args.itemIds].sort().join(',');
     if (pending.current?.key !== key) pending.current = { key, requestId: newRequestId() };
     const { requestId } = pending.current;
     setIsSaving(true);
     setError(undefined);
     try {
-      const result = await api.confirmWear({ ...args, requestId });
+      const result = await api.confirmWear({ ...args, requestId, tzOffsetMinutes: -new Date().getTimezoneOffset() });
       if (pending.current?.requestId === requestId) pending.current = null;
       setLastResult(result);
       return result;

@@ -8,10 +8,10 @@ import {
   type Id,
   type SavedWear,
   type ScanJob,
-  type SuggestedOutfit,
 } from '@shared/contract';
 
 import type { DataApi } from './api';
+import type { Outfit, OutfitSwap } from './types';
 
 /**
  * In-memory backend for FIXTURE mode, seeded from the SAMPLE_* payloads.
@@ -66,9 +66,9 @@ function styleable(item: ClosetItem, excluded: Set<Id>) {
   return item.availability === 'available' && !excluded.has(item.itemId) && !PRIVATE_CATEGORIES.includes(item.category);
 }
 
-function fillOutfit(template: SuggestedOutfit, locked: ClosetItem[], excluded: Set<Id>): SuggestedOutfit | null {
+function fillOutfit(template: Outfit, kept: ClosetItem[], excluded: Set<Id>): Outfit | null {
   const byId = new Map(state.closet.map((item) => [item.itemId, item]));
-  const picked: ClosetItem[] = [...locked];
+  const picked: ClosetItem[] = [...kept];
   const swapped: string[] = [];
   for (const id of template.itemIds) {
     const wanted = byId.get(id);
@@ -178,19 +178,33 @@ export const fixtureApi: DataApi = {
     return delay({ items: washed });
   },
 
-  async suggest({ lockedItemIds, excludeItemIds = [] }) {
+  async suggest({ lockedItemIds, excludeItemIds = [], currentItemIds }) {
     const locked = state.closet.filter((item) => lockedItemIds.includes(item.itemId));
     const lockedUnavailableItemIds = locked.filter((item) => item.availability !== 'available').map((item) => item.itemId);
     if (lockedUnavailableItemIds.length) return delay({ outfits: [], lockedUnavailableItemIds });
 
     const excluded = new Set(excludeItemIds);
+    const current = (currentItemIds ?? []).flatMap((id) => state.closet.find((item) => item.itemId === id) ?? []);
+    const keptCurrent = current.filter((item) => styleable(item, excluded) && !locked.some((lockedItem) => lockedItem.category === item.category));
+    const kept = [...locked, ...keptCurrent];
     const seen = new Set<string>();
-    const outfits: SuggestedOutfit[] = [];
+    const outfits: Outfit[] = [];
     for (const template of SAMPLE_SUGGEST_RESULT.outfits) {
-      const outfit = fillOutfit(template, locked, excluded);
+      const outfit = fillOutfit(template, kept, excluded);
       if (!outfit || seen.has(outfitKey(outfit.itemIds))) continue;
       seen.add(outfitKey(outfit.itemIds));
-      outfits.push({ ...outfit, rank: outfits.length + 1 });
+      const swaps: OutfitSwap[] | undefined = currentItemIds
+        ? current
+            .filter((item) => !outfit.itemIds.includes(item.itemId))
+            .map((item) => ({
+              from: item.itemId,
+              to:
+                outfit.itemIds.find(
+                  (id) => !currentItemIds.includes(id) && state.closet.find((other) => other.itemId === id)?.category === item.category,
+                ) ?? null,
+            }))
+        : undefined;
+      outfits.push({ ...outfit, rank: outfits.length + 1, swaps });
     }
     return delay({ outfits });
   },
@@ -219,6 +233,9 @@ export const fixtureApi: DataApi = {
       ).size;
       return { itemId, distinctOutfits, target: CHALLENGE_TARGET, completed: distinctOutfits >= CHALLENGE_TARGET };
     });
-    return delay({ wear, challenge, duplicate: Boolean(existing) });
+    const wornDays = new Set(state.wears.map((saved) => new Date(saved.wornAt).toDateString()));
+    let streakDays = 0;
+    for (const day = new Date(); wornDays.has(day.toDateString()); day.setDate(day.getDate() - 1)) streakDays += 1;
+    return delay({ wear, challenge, duplicate: Boolean(existing), streakDays });
   },
 };
