@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { availability, category } from "./schema";
@@ -134,6 +135,7 @@ export const addItem = mutation({
       wearsSinceWash: 0,
       isPrivate: PRIVATE_CATEGORIES.includes(args.category),
     });
+    if (args.photoStorageId) await ctx.scheduler.runAfter(0, internal.describe.item, { itemId });
     return await itemView(ctx, (await ctx.db.get(itemId))!);
   },
 });

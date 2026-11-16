@@ -223,6 +223,7 @@ export const confirm = mutation({
           sourceCandidateId: c._id,
         });
         await ctx.db.patch("candidates", c._id, { itemId });
+        if (c.cropStorageId) await ctx.scheduler.runAfter(0, internal.describe.item, { itemId });
         createdCount++;
       }
       if (!itemIds.includes(itemId)) itemIds.push(itemId);

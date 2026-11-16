@@ -12,6 +12,20 @@ export const category = v.union(
   v.literal("accessory"),
 );
 
+export const cut = v.union(v.literal("mens"), v.literal("womens"), v.literal("unisex"));
+
+/** What a vision model wrote about a garment photo; the stylist and the gap finder read it. */
+export const descriptor = v.object({
+  fabric: v.string(),
+  fit: v.string(),
+  pattern: v.string(),
+  formality: v.number(),
+  warmth: v.number(),
+  seasons: v.array(v.string()),
+  occasions: v.array(v.string()),
+  summary: v.string(),
+});
+
 export const availability = v.union(
   v.literal("available"),
   v.literal("laundry"),
@@ -136,6 +150,9 @@ export default defineSchema({
     isPrivate: v.boolean(),
     sourceCandidateId: v.optional(v.id("candidates")),
     demoKey: v.optional(v.string()),
+    cut: v.optional(cut),
+    descriptor: v.optional(descriptor),
+    sourceProductId: v.optional(v.id("products")),
   })
     .index("by_ownerId", ["ownerId"])
     .index("by_ownerId_and_demoKey", ["ownerId", "demoKey"]),
@@ -176,6 +193,8 @@ export default defineSchema({
     priceCents: v.number(),
     pairsWith: v.array(category),
     imageStorageId: v.optional(v.id("_storage")),
+    cut: v.optional(cut),
+    descriptor: v.optional(descriptor),
   }).index("by_brandSlug", ["brandSlug"]),
 
   feedPosts: defineTable({
@@ -189,8 +208,14 @@ export default defineSchema({
     swatches: v.array(v.string()),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
     pieces: v.optional(v.array(v.string())),
+    productIds: v.optional(v.array(v.id("products"))),
     likes: v.number(),
   }).index("by_rank", ["rank"]),
+
+  postLikes: defineTable({
+    ownerId: v.id("profiles"),
+    postId: v.id("feedPosts"),
+  }).index("by_ownerId_and_postId", ["ownerId", "postId"]),
 
   wearLogs: defineTable({
     ownerId: v.id("profiles"),

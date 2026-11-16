@@ -54,7 +54,7 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
 
   const avatarKey = avatar.demo || !AVATAR_ASSETS[avatar.key] ? (AVATAR_ASSETS[PREFERRED_AVATAR_KEY] ? PREFERRED_AVATAR_KEY : DEFAULT_AVATAR_KEY) : avatar.key;
   const dressed = DRESSED_AVATARS.has(avatarKey);
-  const showDemoLabel = avatar.demo || avatarKey !== avatar.key;
+  const showDemoLabel = (avatar.demo || avatarKey !== avatar.key) && !dressed;
   const keysSignature = garmentAssetKeys.join('|');
   const garmentsSignature = JSON.stringify(garments ?? null);
   const outfit = useMemo(
@@ -137,7 +137,7 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
     return () => clearTimeout(timer);
   }, [state.status, attempt, report]);
 
-  const notes = dressed ? ['The avatar wears its own outfit. Your pieces are shown as photos.'] : [
+  const notes = dressed ? [] : [
     ...outfit.worn.flatMap((w) => (w.approximate ? ['Approximate: ' + w.approximate] : [])),
     ...outfit.skipped.map((label) => 'Not shown: ' + label),
   ];

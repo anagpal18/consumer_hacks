@@ -7,4 +7,10 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    files: ['mirror-viewer/build.js'],
+    languageOptions: {
+      globals: { __dirname: 'readonly' },
+    },
+  },
 ]);

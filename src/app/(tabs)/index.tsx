@@ -10,6 +10,7 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { api } from '@/data/api';
 import { useCloset, useProfile } from '@/data/hooks';
 import { outfitToMirrorProps } from '@/data/mirror';
+import { isMannequin } from '@/mirror/assets';
 import { setSession, useSession } from '@/state/session';
 import type {
   ClosetItem,
@@ -199,7 +200,8 @@ export default function HomeScreen() {
 
   if (profile && !profile.onboarded) return <Redirect href="/onboarding" />;
 
-  const approximate = items.filter((item) => !item.renderAssetKey);
+  const onMannequin = isMannequin(profile?.avatar?.key);
+  const approximate = onMannequin ? items : items.filter((item) => !item.renderAssetKey);
   const topChallenge = saved?.challenge[0];
   const turn = (yaw: number, zoom: number) => {
     setView({ yaw, zoom });
@@ -249,7 +251,7 @@ export default function HomeScreen() {
 
         {approximate.length > 0 ? (
           <View style={[styles.approximate, { top: insets.top + 170 }]}>
-            <Text style={styles.approximateLabel}>Shown as photo</Text>
+            <Text style={styles.approximateLabel}>{onMannequin ? 'Wearing' : 'Shown as photo'}</Text>
             {approximate.map((item) => (
               <GarmentThumb key={item.itemId} media={item.media} colorHex={item.colorHex} category={item.category} size={40} />
             ))}

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, MockBadge, Stepper } from '@/components/ui';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { api, type AvatarProfile, type ProportionPreset } from '@/data/api';
+import { BODY_TYPES, type BodyGender } from '@/mirror/assets';
 
 const PRESETS: { key: ProportionPreset; label: string; shoulders: number; waist: number; hips: number }[] = [
   { key: 'straight', label: 'Straight', shoulders: 44, waist: 38, hips: 44 },
@@ -45,7 +46,9 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [heightCm, setHeightCm] = useState(170);
-  const [proportion, setProportion] = useState<ProportionPreset>('straight');
+  const [proportion] = useState<ProportionPreset>('straight');
+  const [gender, setGender] = useState<BodyGender>('male');
+  const [bodyKey, setBodyKey] = useState<string | null>(null);
   const [adjust, setAdjust] = useState({ shoulders: 0, waist: 0, hips: 0, legs: 0 });
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +69,15 @@ export default function OnboardingScreen() {
     await api.profile.save(
       usePreset
         ? { onboarded: true, avatarStatus: 'ready' }
-        : { onboarded: true, photoUri, heightCm, proportion, adjust, avatarStatus: 'preparing' },
+        : {
+            onboarded: true,
+            photoUri,
+            heightCm,
+            proportion,
+            adjust,
+            avatarStatus: 'ready',
+            avatar: { kind: 'preset', key: bodyKey ?? 'body/male-4', demo: false },
+          },
     );
     router.replace('/');
   }
@@ -100,53 +111,45 @@ export default function OnboardingScreen() {
           />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.heading}>Proportions</Text>
-          <View style={styles.presets}>
-            {PRESETS.map((entry) => (
+        <View style={styles.section} testID="onboarding-body-type">
+          <Text style={styles.heading}>Body type</Text>
+          <View style={styles.genderRow}>
+            {(['male', 'female'] as const).map((g) => (
               <Pressable
-                key={entry.key}
+                key={g}
                 accessibilityRole="button"
-                accessibilityState={{ selected: proportion === entry.key }}
-                onPress={() => setProportion(entry.key)}
-                style={[styles.preset, proportion === entry.key && styles.presetSelected]}>
-                <Silhouette shoulders={entry.shoulders} waist={entry.waist} hips={entry.hips} legs={46} color={proportion === entry.key ? Colors.accent : Colors.mirrorDeep} />
-                <Text style={styles.presetLabel}>{entry.label}</Text>
+                accessibilityState={{ selected: gender === g }}
+                onPress={() => {
+                  setGender(g);
+                  setBodyKey(null);
+                }}
+                style={[styles.genderChip, gender === g && styles.genderChipOn]}>
+                <Text style={[styles.genderText, gender === g && styles.genderTextOn]}>{g === 'male' ? 'Men' : 'Women'}</Text>
               </Pressable>
             ))}
           </View>
+          <View style={styles.bodies}>
+            {BODY_TYPES.filter((b) => b.gender === gender).map((b) => (
+              <Pressable
+                key={b.key}
+                accessibilityRole="button"
+                accessibilityLabel={b.label + ' body type'}
+                accessibilityState={{ selected: bodyKey === b.key }}
+                onPress={() => setBodyKey(b.key)}
+                style={[styles.body5, bodyKey === b.key && styles.presetSelected]}>
+                <Silhouette shoulders={b.shoulders * 0.62} waist={b.waist * 0.62} hips={b.hips * 0.62} legs={34} color={bodyKey === b.key ? Colors.accent : Colors.mirrorDeep} />
+                <Text style={styles.presetLabel}>{b.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {!bodyKey ? <Text style={styles.caption}>Pick the body type closest to yours to set up your mannequin.</Text> : null}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.heading}>Fine-tune</Text>
-          <View style={styles.tuneRow}>
-            <View style={styles.tunePreview}>
-              <Silhouette
-                shoulders={preset.shoulders + adjust.shoulders * 4}
-                waist={preset.waist + adjust.waist * 4}
-                hips={preset.hips + adjust.hips * 4}
-                legs={(46 + adjust.legs * 5) * (heightCm / 170)}
-                color={Colors.inkSoft}
-              />
-            </View>
-            <View style={styles.tuneSteppers}>
-              {ADJUSTMENTS.map((entry) => (
-                <Stepper
-                  key={entry.key}
-                  label={entry.label}
-                  value={ADJUST_WORD[adjust[entry.key] + 2]}
-                  onMinus={() => setAdjust({ ...adjust, [entry.key]: Math.max(-2, adjust[entry.key] - 1) })}
-                  onPlus={() => setAdjust({ ...adjust, [entry.key]: Math.min(2, adjust[entry.key] + 1) })}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
         {api.usingMockData ? <MockBadge label="Sample build: every choice shows the demo avatar" /> : null}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
-        <Button label="Create my avatar" testID="onboarding-create" onPress={() => finish(false)} />
+        <Button label={bodyKey ? 'Create my mannequin' : 'Pick a body type'} disabled={!bodyKey} testID="onboarding-create" onPress={() => finish(false)} />
         <Text style={styles.caption}>You can start right away while your avatar is prepared.</Text>
       </View>
     </View>
@@ -167,6 +170,13 @@ const styles = StyleSheet.create({
   caption: { fontSize: 12, lineHeight: 17, color: Colors.muted, textAlign: 'center' },
   error: { fontSize: 13, color: Colors.danger },
   presets: { flexDirection: 'row', gap: Spacing.two },
+  genderRow: { flexDirection: 'row', gap: Spacing.two },
+  genderChip: { flex: 1, alignItems: 'center', paddingVertical: Spacing.two, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.line },
+  genderChipOn: { borderColor: Colors.ink, backgroundColor: Colors.ink },
+  genderText: { fontSize: 14, fontWeight: '600', color: Colors.ink },
+  genderTextOn: { color: Colors.background },
+  bodies: { flexDirection: 'row', gap: 6 },
+  body5: { flex: 1, alignItems: 'center', gap: Spacing.one, paddingVertical: Spacing.two, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.line, backgroundColor: Colors.background },
   preset: { flex: 1, alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.line, backgroundColor: Colors.background },
   presetSelected: { borderColor: Colors.accent, backgroundColor: Colors.accentSoft },
   presetLabel: { fontSize: 12, fontWeight: '600', color: Colors.ink, textAlign: 'center' },

@@ -14,6 +14,7 @@ import type * as catalog from "../catalog.js";
 import type * as closet from "../closet.js";
 import type * as color from "../color.js";
 import type * as demo from "../demo.js";
+import type * as describe from "../describe.js";
 import type * as detect from "../detect.js";
 import type * as lib from "../lib.js";
 import type * as media from "../media.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   closet: typeof closet;
   color: typeof color;
   demo: typeof demo;
+  describe: typeof describe;
   detect: typeof detect;
   lib: typeof lib;
   media: typeof media;
