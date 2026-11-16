@@ -193,7 +193,11 @@ export default defineSchema({
     discountPct: v.number(),
     pointsCost: v.number(),
     expiresAt: v.number(),
-  }).index("by_brandSlug", ["brandSlug"]),
+    /** The Whop promo code for this deal's code, set by whop:syncPromoCodes. `code` is lowercase, as Whop stores it. */
+    whopPromo: v.optional(v.object({ id: v.string(), code: v.string() })),
+  })
+    .index("by_brandSlug", ["brandSlug"])
+    .index("by_code", ["code"]),
 
   products: defineTable({
     brandSlug: v.string(),

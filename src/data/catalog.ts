@@ -102,6 +102,7 @@ export type Reel = {
 export type GapProduct = {
   productId: string;
   name: string;
+  brandSlug?: string;
   brandName: string;
   category: string;
   imageUrl: string | null;
@@ -217,10 +218,19 @@ export const toggleLike = (postId: string) => liveClient().mutation(toggleLikeRe
 export const addToCloset = (productId: string) => liveClient().mutation(addToClosetRef, { closetCode: CLOSET_CODE, productId });
 
 export type BrandProduct = { productId: string; name: string; category: string; colorHex: string; priceCents: number; imageUrl: string | null };
-export type WhopCheckout = { url: string; price: number; pct: number; sandbox: boolean };
+export type WhopCheckout = { url: string; price: number; listPrice: number; pct: number; code: string | null; sandbox: boolean };
+
+/** A code checked by the backend: its deal and discount, or a message saying why it can't be used. */
+export type RedeemResult =
+  | { ok: true; code: string; dealId: string; discountPct: number; brandSlug: string; brandName: string; expiresAt: number }
+  | { ok: false; reason: string; message: string };
+
+/** Where a code is being used: one deal in Deals, or one product (any deal of its brand) in For you. */
+export type CodeScope = { dealId?: string; productId?: string };
 
 const brandProductsRef = makeFunctionReference<'query', { brandSlug: string }, BrandProduct[]>('catalog:brandProducts');
-const whopCheckoutRef = makeFunctionReference<'action', { productId: string; dealId?: string }, WhopCheckout>('whop:checkout');
+const whopCheckoutRef = makeFunctionReference<'action', { productId: string; dealId?: string; code?: string }, WhopCheckout>('whop:checkout');
+const redeemCodeRef = makeFunctionReference<'action', { code: string; dealId?: string; productId?: string }, RedeemResult>('whop:redeemCode');
 
 /** A brand's products for the Deals screen. Null in fixture mode, while loading, or when catalog:brandProducts is not deployed. */
 export function useBrandProducts(brandSlug: string) {
@@ -239,5 +249,9 @@ export function useBrandProducts(brandSlug: string) {
   return rows;
 }
 
-/** Creates a Whop checkout for one product, with a brand deal's discount applied when dealId is given. */
-export const whopCheckout = (productId: string, dealId?: string) => liveClient().action(whopCheckoutRef, dealId ? { productId, dealId } : { productId });
+/** Creates a Whop checkout for one product at full price; a redeemed code makes Whop apply its discount. */
+export const whopCheckout = (productId: string, opts: { dealId?: string; code?: string } = {}) =>
+  liveClient().action(whopCheckoutRef, { productId, ...(opts.dealId ? { dealId: opts.dealId } : {}), ...(opts.code ? { code: opts.code } : {}) });
+
+/** Checks a typed code on the backend for one deal or one product. */
+export const redeemCode = (code: string, scope: CodeScope) => liveClient().action(redeemCodeRef, { code, ...scope });

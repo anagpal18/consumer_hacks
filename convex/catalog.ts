@@ -661,6 +661,7 @@ export const gaps = query({
         items.push({
           productId: p._id,
           name: p.name,
+          brandSlug: p.brandSlug,
           brandName: names.get(p.brandSlug) ?? p.brandSlug,
           category: p.category,
           imageUrl: p.imageStorageId ? await ctx.storage.getUrl(p.imageStorageId) : null,
