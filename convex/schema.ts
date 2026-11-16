@@ -148,6 +148,50 @@ export default defineSchema({
     lastWornAt: v.number(),
   }).index("by_ownerId_and_key", ["ownerId", "key"]),
 
+  // Sample catalog for Feed and Shop. Every row is demo content, never a real partner or account.
+  brands: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    tagline: v.string(),
+    colorHex: v.string(),
+  }).index("by_slug", ["slug"]),
+
+  deals: defineTable({
+    brandSlug: v.string(),
+    title: v.string(),
+    description: v.string(),
+    code: v.string(),
+    discountPct: v.number(),
+    pointsCost: v.number(),
+    expiresAt: v.number(),
+  }).index("by_brandSlug", ["brandSlug"]),
+
+  products: defineTable({
+    brandSlug: v.string(),
+    name: v.string(),
+    category,
+    subtype: v.string(),
+    color: v.string(),
+    colorHex: v.string(),
+    priceCents: v.number(),
+    pairsWith: v.array(category),
+    imageStorageId: v.optional(v.id("_storage")),
+  }).index("by_brandSlug", ["brandSlug"]),
+
+  feedPosts: defineTable({
+    rank: v.number(),
+    kind: v.union(v.literal("friend"), v.literal("creator"), v.literal("brand")),
+    author: v.string(),
+    handle: v.string(),
+    brandSlug: v.optional(v.string()),
+    caption: v.string(),
+    prompt: v.string(),
+    swatches: v.array(v.string()),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
+    pieces: v.optional(v.array(v.string())),
+    likes: v.number(),
+  }).index("by_rank", ["rank"]),
+
   wearLogs: defineTable({
     ownerId: v.id("profiles"),
     requestId: v.string(),

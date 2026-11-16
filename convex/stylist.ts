@@ -7,6 +7,13 @@ import { fail, requireProfile } from "./lib";
 const MODEL_TIMEOUT_MS = 25_000;
 const SWAP_TIMEOUT_MS = 10_000;
 const MAX_COMBOS = 60;
+// A big closet makes the cross product explode (92 tops x 62 bottoms x 47 shoes x 42 layers ran the
+// action out of memory), so each slot contributes only its freshest, most varied few to the combos.
+const SLOT_CAP: Record<string, number> = { top: 8, bottom: 6, dress: 4, shoes: 5, outerwear: 4 };
+// Above this many styleable pieces the model composes looks straight from the closet, so the plan
+// decides what gets picked instead of whichever few pieces happened to pass the cap.
+const DIRECT_THRESHOLD = 40;
+const DIRECT_PER_SLOT = 60;
 const SLOT_ORDER = ["outerwear", "top", "dress", "bottom", "shoes", "accessory"];
 const STYLED = new Set(["outerwear", "top", "dress", "bottom", "shoes", "accessory"]);
 
@@ -55,7 +62,40 @@ function statusWord(item: StyleItem) {
   return item.availability === "available" ? "excluded" : item.availability.replace(/_/g, " ");
 }
 
-export function buildCombos(pool: StyleItem[], locked: StyleItem[], weather: Weather | undefined): Combo[] {
+function hash(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/** Keeps the order, but takes one of each subtype+color first so a capped slot stays varied. */
+export function diverse<T extends { subtype: string; color: string }>(sorted: T[], cap: number): T[] {
+  if (sorted.length <= cap) return sorted;
+  const seen = new Set<string>();
+  const first: T[] = [];
+  const rest: T[] = [];
+  for (const i of sorted) {
+    const k = `${i.subtype}|${i.color}`;
+    if (seen.has(k)) rest.push(i);
+    else {
+      seen.add(k);
+      first.push(i);
+    }
+  }
+  const bySubtype = new Set<string>();
+  const lead: T[] = [];
+  const tail: T[] = [];
+  for (const i of first) {
+    if (bySubtype.has(i.subtype)) tail.push(i);
+    else {
+      bySubtype.add(i.subtype);
+      lead.push(i);
+    }
+  }
+  return [...lead, ...tail, ...rest].slice(0, cap);
+}
+
+export function buildCombos(pool: StyleItem[], locked: StyleItem[], weather: Weather | undefined, salt = ""): Combo[] {
   const lockedBy = new Map<string, StyleItem>();
   for (const l of locked) {
     if (!STYLED.has(l.category) || l.isPrivate) fail("BAD_LOCK", `${l.name} can't be styled on the avatar.`);
@@ -68,9 +108,11 @@ export function buildCombos(pool: StyleItem[], locked: StyleItem[], weather: Wea
   const options = (cat: string) => {
     const l = lockedBy.get(cat);
     if (l) return [l];
-    return pool
+    const tie = (id: string) => (salt ? hash(id + salt) : 0);
+    const sorted = pool
       .filter((i) => i.category === cat)
-      .sort((a, b) => a.wearsSinceWash - b.wearsSinceWash || a.wearCount - b.wearCount || (a._id < b._id ? -1 : 1));
+      .sort((a, b) => a.wearsSinceWash - b.wearsSinceWash || a.wearCount - b.wearCount || tie(a._id) - tie(b._id) || (a._id < b._id ? -1 : 1));
+    return diverse(sorted, SLOT_CAP[cat] ?? 6);
   };
   const bases: StyleItem[][] = [];
   const useDress = !lockedBy.has("top") && !lockedBy.has("bottom");
@@ -179,6 +221,107 @@ async function rankWithModel(
   }
 }
 
+/**
+ * Large closets: the model composes up to two looks straight from the available pieces. Every look is
+ * re-validated here (owned, available, one piece per slot, locked pieces kept), so a bad pick is dropped.
+ */
+async function composeWithModel(
+  prompt: string,
+  weather: Weather | undefined,
+  pool: StyleItem[],
+  locked: StyleItem[],
+  timeoutMs: number,
+): Promise<{ combo: Combo; reason: string }[] | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  const lockedCats = new Set(locked.map((l) => l.category));
+  const fresh = (a: StyleItem, b: StyleItem) =>
+    a.wearsSinceWash - b.wearsSinceWash || a.wearCount - b.wearCount || hash(a._id + prompt) - hash(b._id + prompt);
+  const offered = new Map<string, StyleItem>();
+  const sections: string[] = [];
+  for (const cat of ["top", "bottom", "dress", "outerwear", "shoes"]) {
+    if (lockedCats.has(cat as StyleItem["category"])) continue;
+    const list = diverse(pool.filter((i) => i.category === cat).sort(fresh), DIRECT_PER_SLOT);
+    if (!list.length) continue;
+    for (const i of list) offered.set(i._id, i);
+    sections.push(`${cat.toUpperCase()}:\n${list.map((i) => `${i._id} | ${i.name}${i.wearsSinceWash ? ` (worn ${i.wearsSinceWash}x since wash)` : ""}`).join("\n")}`);
+  }
+  const lockedLine = locked.length ? `\nAlready chosen and must stay in every look: ${locked.map((l) => `${l._id} | ${l.category}: ${l.name}`).join("; ")}` : "";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: process.env.OPENAI_STYLIST_MODEL || "gpt-5-mini",
+        reasoning: { effort: "minimal" },
+        instructions:
+          "You are a concise personal stylist. Build two clearly different looks for the user's plan using only the listed pieces. Each look is either one TOP plus one BOTTOM, or one DRESS; add one SHOES, and one OUTERWEAR only when the plan or weather calls for a layer. Never use two pieces from the same section in one look. Match formality, weather and color. Copy item ids exactly (the text before the |). Give one short reason (max 14 words) per look.",
+        input: `Plan: ${prompt.trim() || "everyday"}\nWeather: ${weather ? `${weather.tempC}C, ${weather.condition}` : "unknown"}${lockedLine}\n\n${sections.join("\n\n")}`,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "stylist_looks",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["looks"],
+              properties: {
+                looks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["itemIds", "reason"],
+                    properties: { itemIds: { type: "array", items: { type: "string" } }, reason: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    });
+    if (!res.ok) {
+      console.error("stylist compose error", res.status);
+      return null;
+    }
+    const json = (await res.json()) as { output?: { type: string; content?: { type: string; text?: string }[] }[] };
+    const text = (json.output ?? [])
+      .flatMap((o) => (o.type === "message" ? (o.content ?? []) : []))
+      .find((p) => p.type === "output_text")?.text;
+    if (!text) return null;
+    const looks = (JSON.parse(text) as { looks?: unknown }).looks;
+    if (!Array.isArray(looks)) return null;
+    const out: { combo: Combo; reason: string }[] = [];
+    for (const look of looks) {
+      if (!look || !Array.isArray(look.itemIds) || typeof look.reason !== "string") continue;
+      const picked = [...new Set(look.itemIds as string[])].map((id) => offered.get(id));
+      if (picked.some((i) => !i)) continue;
+      const parts = [...locked, ...(picked as StyleItem[])];
+      const cats = parts.map((i) => i.category);
+      if (new Set(cats).size !== cats.length) continue;
+      const has = (c: string) => cats.includes(c as StyleItem["category"]);
+      const complete = has("dress") ? !has("top") && !has("bottom") : has("top") && has("bottom");
+      if (!complete) continue;
+      const itemIds = orderBySlot(parts).map((i) => i._id);
+      const key = comboKey(itemIds);
+      if (out.some((o) => o.combo.key === key)) continue;
+      out.push({ combo: { itemIds, key, score: 0 }, reason: look.reason.trim().slice(0, 160) });
+      if (out.length === 2) break;
+    }
+    return out.length ? out : null;
+  } catch (e) {
+    console.error("stylist compose failed", e instanceof Error ? e.message : e);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function fallbackReason(items: StyleItem[], prompt: string, weather: Weather | undefined) {
   const names = items.filter((i) => i.category !== "outerwear").slice(0, 2).map((i) => i.name.toLowerCase());
   const layer = items.find((i) => i.category === "outerwear");
@@ -250,7 +393,7 @@ export const suggest = action({
       pool = all.filter((i) => usable(i) && open.has(i.category) && !currentIds.has(i._id));
     }
 
-    const combos = buildCombos(pool, keep, args.weather);
+    const combos = buildCombos(pool, keep, args.weather, args.prompt);
     if (combos.length === 0) {
       return {
         outfits: [],
@@ -273,8 +416,13 @@ export const suggest = action({
       ? `Keep the current look; only replace ${swappedOut.map((i) => `${i.name} (${statusWord(i)})`).join(", ")}. Every look below already does that.`
       : undefined;
     const byKey = new Map(combos.map((c) => [c.key, c] as const));
-    const picks = combos.length > 1 ? await rankWithModel(args.prompt, args.weather, byId, combos, note, current ? SWAP_TIMEOUT_MS : MODEL_TIMEOUT_MS) : null;
     const chosen: { combo: Combo; reason: string }[] = [];
+    const large = !current && pool.length > DIRECT_THRESHOLD;
+    if (large) chosen.push(...((await composeWithModel(args.prompt, args.weather, pool, keep, MODEL_TIMEOUT_MS)) ?? []));
+    const picks =
+      !chosen.length && combos.length > 1
+        ? await rankWithModel(args.prompt, args.weather, byId, combos, note, current || large ? SWAP_TIMEOUT_MS : MODEL_TIMEOUT_MS)
+        : null;
     for (const p of picks ?? []) {
       const combo = byKey.get(comboKey(p.itemIds));
       if (combo && !chosen.some((c) => c.combo.key === combo.key)) chosen.push({ combo, reason: p.reason.trim().slice(0, 160) });
