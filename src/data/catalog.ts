@@ -5,9 +5,8 @@ import { convex, liveClient } from './client';
 import { CLOSET_CODE } from './mode';
 
 /**
- * Sample catalog (brands, deals, feed posts, closet-aware product picks) from the Convex backend.
- * All of it is demo content and stays labeled "Sample" on screen. Hooks return null in fixture
- * mode or while loading, so screens fall back to their built-in sample cards.
+ * Catalog (brands, deals, feed posts, closet-aware product picks) from the Convex backend.
+ * Hooks return null in fixture mode or while loading, so screens fall back to their built-in cards.
  */
 
 export type FeedPost = {
@@ -216,3 +215,29 @@ export function useGaps() {
 
 export const toggleLike = (postId: string) => liveClient().mutation(toggleLikeRef, { closetCode: CLOSET_CODE, postId });
 export const addToCloset = (productId: string) => liveClient().mutation(addToClosetRef, { closetCode: CLOSET_CODE, productId });
+
+export type BrandProduct = { productId: string; name: string; category: string; colorHex: string; priceCents: number; imageUrl: string | null };
+export type WhopCheckout = { url: string; price: number; pct: number; sandbox: boolean };
+
+const brandProductsRef = makeFunctionReference<'query', { brandSlug: string }, BrandProduct[]>('catalog:brandProducts');
+const whopCheckoutRef = makeFunctionReference<'action', { productId: string; dealId?: string }, WhopCheckout>('whop:checkout');
+
+/** A brand's products for the Deals screen. Null in fixture mode, while loading, or when catalog:brandProducts is not deployed. */
+export function useBrandProducts(brandSlug: string) {
+  const [rows, setRows] = useState<BrandProduct[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    if (!convex || !brandSlug) return;
+    convex.query(brandProductsRef, { brandSlug }).then(
+      (next) => live && setRows(next),
+      (error) => !isMissingFunction(error) && console.warn('brand products load failed', error),
+    );
+    return () => {
+      live = false;
+    };
+  }, [brandSlug]);
+  return rows;
+}
+
+/** Creates a Whop checkout for one product, with a brand deal's discount applied when dealId is given. */
+export const whopCheckout = (productId: string, dealId?: string) => liveClient().action(whopCheckoutRef, dealId ? { productId, dealId } : { productId });
