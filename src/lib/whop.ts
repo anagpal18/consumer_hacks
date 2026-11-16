@@ -25,7 +25,7 @@ export function useWhopCheckout() {
     const key = keyOf(productId, dealId);
     if (pending) return;
     if (IS_FIXTURE_MODE || !productId || productId.startsWith('sample')) {
-      setErrors((map) => ({ ...map, [key]: productId ? 'Sample item. Whop checkout runs in live mode.' : 'This piece is not in the catalog, so it cannot be bought.' }));
+      setErrors((map) => ({ ...map, [key]: productId ? 'Checkout needs the app to be connected to the store.' : 'This piece is not in the catalog, so it cannot be bought.' }));
       return;
     }
     setPending(key);

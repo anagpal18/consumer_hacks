@@ -72,7 +72,6 @@ test("checkout without a deal charges full price; production env uses the live A
   fetchMock.mockResolvedValueOnce(whopOk("https://whop.com/checkout/ch_live/"));
   expect(await t.action(api.whop.checkout, { productId: blazer })).toEqual({ url: "https://whop.com/checkout/ch_live/", price: 129, pct: 0, sandbox: false });
   expect(fetchMock.mock.calls[0][0]).toBe("https://api.whop.com/api/v1/checkout_configurations");
-  expect(await t.query(api.whop.config, {})).toEqual({ sandbox: false, configured: true });
 });
 
 test("checkout validates the product and deal before calling Whop", async () => {
@@ -100,7 +99,6 @@ test("checkout validates the product and deal before calling Whop", async () => 
 test("checkout reports a missing key and Whop failures clearly", async () => {
   const { t, blazer } = await setup();
   vi.stubEnv("WHOP_API_KEY", "");
-  expect(await t.query(api.whop.config, {})).toEqual({ sandbox: true, configured: false });
   await expect(t.action(api.whop.checkout, { productId: blazer })).rejects.toThrow(/WHOP_API_KEY is missing/);
   expect(fetchMock).not.toHaveBeenCalled();
 

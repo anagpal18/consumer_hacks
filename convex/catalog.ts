@@ -6,9 +6,9 @@ import { ensureProfile, fail, findProfile, type Category } from "./lib";
 import { colorFamily } from "./renderAssets";
 
 /**
- * Sample catalog behind Feed and Shop: brands, deals, products and feed posts.
- * Everything here is demo content. The UI labels it "Sample", and there is no checkout,
- * no partner integration and no real account behind any row.
+ * Catalog behind Feed and Deals: brands, deals, products and feed posts.
+ * Everything here is demo content with no partner integration behind any row. Purchases go
+ * through a Whop checkout (convex/whop.ts); the shown copy and codes avoid demo wording.
  */
 
 const BRANDS: [string, string, string, string][] = [
@@ -93,6 +93,27 @@ function rng(seed: number) {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+const dealDescription = (brand: string) => `Use it on anything from ${brand}. Redeem with Wear Again points.`;
+const dealCode = (slug: string, pct: number) => `WEAR-${slug.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 8)}-${pct || "FIX"}`;
+
+/** Rewrites existing deals' description and code to the current wording. Keeps ids, titles and discounts. */
+export const refreshDealCopy = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const names = new Map((await ctx.db.query("brands").take(100)).map((b) => [b.slug, b.name] as const));
+    let updated = 0;
+    for (const deal of await ctx.db.query("deals").take(500)) {
+      const name = names.get(deal.brandSlug) ?? deal.brandSlug;
+      const description = deal.discountPct > 0 ? dealDescription(name) : deal.description;
+      const code = dealCode(deal.brandSlug, deal.discountPct);
+      if (description === deal.description && code === deal.code) continue;
+      await ctx.db.patch("deals", deal._id, { description, code });
+      updated++;
+    }
+    return { updated };
+  },
+});
+
 /** Idempotent: fills the sample catalog once. Pass `force` to rebuild it. */
 export const seed = mutation({
   args: { force: v.optional(v.boolean()) },
@@ -110,7 +131,7 @@ export const seed = mutation({
     for (const [slug, name, tagline, colorHex] of BRANDS) {
       await ctx.db.insert("brands", { slug, name, tagline, colorHex });
       const offers: [string, string, number, number][] = [
-        [`${10 + Math.floor(r() * 4) * 5}% off your next order`, `Sample offer from ${name}. Redeem with Wear Again points.`, 0, 300],
+        [`${10 + Math.floor(r() * 4) * 5}% off your next order`, dealDescription(name), 0, 300],
         ["Free repair or alteration", `Keep a ${name} piece going instead of replacing it.`, 0, 500],
       ];
       for (const [title, description, , pointsCost] of offers) {
@@ -119,7 +140,7 @@ export const seed = mutation({
           brandSlug: slug,
           title,
           description,
-          code: `SAMPLE-${slug.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6)}-${pct || "FIX"}`,
+          code: dealCode(slug, pct),
           discountPct: pct,
           pointsCost,
           expiresAt: now + (7 + Math.floor(r() * 30)) * 86_400_000,
@@ -213,11 +234,11 @@ export const importPhotographed = internalMutation({
     const now = Date.now();
     const slugs = [...new Set(args.products.map((p) => p.brandSlug))];
     for (const slug of slugs) {
-      const [name, tagline, colorHex] = BRAND_INFO[slug] ?? [slug, "Sample brand", "#333333"];
+      const [name, tagline, colorHex] = BRAND_INFO[slug] ?? [slug, "New season", "#333333"];
       await ctx.db.insert("brands", { slug, name, tagline, colorHex });
       const pct = 10 + Math.floor(r() * 4) * 5;
-      await ctx.db.insert("deals", { brandSlug: slug, title: `${pct}% off your next order`, description: `Sample offer from ${name}. Redeem with Wear Again points.`, code: `SAMPLE-${slug.toUpperCase()}-${pct}`, discountPct: pct, pointsCost: 300, expiresAt: now + 14 * 86_400_000 });
-      await ctx.db.insert("deals", { brandSlug: slug, title: "Free repair or alteration", description: `Keep a ${name} piece going instead of replacing it.`, code: `SAMPLE-${slug.toUpperCase()}-FIX`, discountPct: 0, pointsCost: 500, expiresAt: now + 30 * 86_400_000 });
+      await ctx.db.insert("deals", { brandSlug: slug, title: `${pct}% off your next order`, description: dealDescription(name), code: dealCode(slug, pct), discountPct: pct, pointsCost: 300, expiresAt: now + 14 * 86_400_000 });
+      await ctx.db.insert("deals", { brandSlug: slug, title: "Free repair or alteration", description: `Keep a ${name} piece going instead of replacing it.`, code: dealCode(slug, 0), discountPct: 0, pointsCost: 500, expiresAt: now + 30 * 86_400_000 });
     }
     const inserted: ((typeof args.products)[number] & { _id: Id<"products"> })[] = [];
     for (const p of args.products) inserted.push({ ...p, _id: await ctx.db.insert("products", { ...p, pairsWith: PAIRS[p.category] ?? ["top", "bottom"] }) });

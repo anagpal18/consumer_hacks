@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { action, internalQuery, query } from "./_generated/server";
+import { action, internalQuery } from "./_generated/server";
 import { fail } from "./lib";
 
 /**
@@ -11,12 +11,6 @@ import { fail } from "./lib";
 const API_VERSION_DATE = "2026-11-14";
 
 const isSandbox = () => process.env.WHOP_ENVIRONMENT !== "production";
-
-/** Whether the app should label checkouts as test checkouts, and whether checkout is set up at all. */
-export const config = query({
-  args: {},
-  handler: async () => ({ sandbox: isSandbox(), configured: !!process.env.WHOP_API_KEY }),
-});
 
 export const productForCheckout = internalQuery({
   args: { productId: v.id("products"), dealId: v.optional(v.id("deals")) },

@@ -5,9 +5,8 @@ import { convex, liveClient } from './client';
 import { CLOSET_CODE } from './mode';
 
 /**
- * Sample catalog (brands, deals, feed posts, closet-aware product picks) from the Convex backend.
- * All of it is demo content and stays labeled "Sample" on screen. Hooks return null in fixture
- * mode or while loading, so screens fall back to their built-in sample cards.
+ * Catalog (brands, deals, feed posts, closet-aware product picks) from the Convex backend.
+ * Hooks return null in fixture mode or while loading, so screens fall back to their built-in cards.
  */
 
 export type FeedPost = {
@@ -221,7 +220,6 @@ export type BrandProduct = { productId: string; name: string; category: string; 
 export type WhopCheckout = { url: string; price: number; pct: number; sandbox: boolean };
 
 const brandProductsRef = makeFunctionReference<'query', { brandSlug: string }, BrandProduct[]>('catalog:brandProducts');
-const whopConfigRef = makeFunctionReference<'query', Record<string, never>, { sandbox: boolean; configured: boolean }>('whop:config');
 const whopCheckoutRef = makeFunctionReference<'action', { productId: string; dealId?: string }, WhopCheckout>('whop:checkout');
 
 /** A brand's products for the Deals screen. Null in fixture mode, while loading, or when catalog:brandProducts is not deployed. */
@@ -240,9 +238,6 @@ export function useBrandProducts(brandSlug: string) {
   }, [brandSlug]);
   return rows;
 }
-
-/** Whop environment of the backend, so the UI can label test checkouts. Null in fixture mode or while loading. */
-export const useWhopConfig = () => useOnce(() => convex!.query(whopConfigRef, {}));
 
 /** Creates a Whop checkout for one product, with a brand deal's discount applied when dealId is given. */
 export const whopCheckout = (productId: string, dealId?: string) => liveClient().action(whopCheckoutRef, dealId ? { productId, dealId } : { productId });
