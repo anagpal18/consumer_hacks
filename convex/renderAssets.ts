@@ -49,8 +49,53 @@ export function colorFamily(hex: string | undefined): ColorFamily | undefined {
   return "pink";
 }
 
-export function matchRenderAsset(item: { category: Category; subtype: string; colorHex?: string }): string | undefined {
+type ScanMatchInput = { category: Category; subtype: string; color?: string; pattern?: string; colorHex?: string };
+
+const has = (text: string, words: string[]) => words.some((w) => new RegExp(`(^|[^a-z])${w}([^a-z]|$)`).test(text));
+
+/**
+ * Scanned-closet keys, matched on the detector's own words (subtype, color, pattern) because pixel
+ * colors of hanging pieces in dim frames are unreliable. Each rule needs the garment type and the
+ * color word; anything else falls through to the color-swatch match below or stays unmapped.
+ */
+const SCAN_RULES: { key: string; categories: Category[]; match: (subtype: string, color: string, pattern: string) => boolean }[] = [
+  {
+    key: "demo/hoodie-grey-zip",
+    categories: ["top", "outerwear"],
+    match: (s, c) => has(s, ["hoodie", "hooded sweatshirt"]) && has(c, ["gray", "grey", "heather"]),
+  },
+  {
+    key: "demo/flannel-navy-plaid",
+    categories: ["top", "outerwear"],
+    match: (s, c, p) => (has(s, ["shirt", "flannel"]) && !has(s, ["t-shirt", "tee"])) && (p === "plaid" || has(s, ["flannel"])) && has(c, ["navy"]),
+  },
+  {
+    key: "demo/shirt-lightblue",
+    categories: ["top"],
+    match: (s, c, p) =>
+      has(s, ["shirt"]) && !has(s, ["t-shirt", "tee", "denim", "chambray"]) && has(c, ["light blue", "pale blue", "sky blue"]) && (p === "" || p === "solid"),
+  },
+  {
+    key: "demo/blazer-navy",
+    categories: ["outerwear"],
+    match: (s, c, p) => has(s, ["blazer", "suit jacket", "sport coat", "sports coat"]) && has(c, ["navy"]) && (p === "" || p === "solid"),
+  },
+  {
+    key: "demo/jeans-darkwash",
+    categories: ["bottom"],
+    match: (s, c) => has(s, ["jeans"]) && has(c, ["dark blue", "dark wash", "indigo", "navy", "dark denim", "dark indigo"]),
+  },
+];
+
+export const SCAN_RENDER_KEYS = SCAN_RULES.map((r) => r.key);
+
+export function matchRenderAsset(item: ScanMatchInput): string | undefined {
+  if (item.category === "underwear" || item.category === "socks") return undefined;
   const subtype = item.subtype.trim().toLowerCase();
+  const color = (item.color ?? "").trim().toLowerCase();
+  const pattern = (item.pattern ?? "").trim().toLowerCase();
+  const rule = SCAN_RULES.find((r) => r.categories.includes(item.category) && r.match(subtype, color, pattern));
+  if (rule) return rule.key;
   const family = colorFamily(item.colorHex);
   if (!family) return undefined;
   const match = RENDER_ASSETS.find(

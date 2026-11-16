@@ -262,7 +262,7 @@ export default function HomeScreen() {
           {profile?.avatarStatus === 'preparing' ? (
             <View style={styles.banner}>
               <Ionicons name="hourglass-outline" size={18} color={Colors.inkSoft} />
-              <Text style={styles.bannerText}>Preparing your avatar. Showing the demo avatar for now.</Text>
+              <Text style={styles.bannerText}>Preparing your avatar. Showing a standard avatar for now.</Text>
             </View>
           ) : null}
           {homeNotice ? (
@@ -321,7 +321,7 @@ export default function HomeScreen() {
             <Text style={styles.title}>Your closet is empty</Text>
             <Text style={styles.reason}>Record a short video of your clothes, confirm what we find, and get dressed from what you own.</Text>
             <Button label="Scan your closet" icon="videocam-outline" testID="scan-cta" onPress={() => router.push('/scan')} />
-            {api.dev ? <Button label="Load sample closet instead" variant="ghost" compact onPress={() => api.dev?.loadSampleCloset()} /> : null}
+            {api.dev ? <Button label="Load a starter closet instead" variant="ghost" compact onPress={() => api.dev?.loadSampleCloset()} /> : null}
           </>
         ) : (
           <>

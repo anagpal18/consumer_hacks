@@ -98,7 +98,7 @@ export default function ScanCheckScreen() {
         <Text style={styles.buttonText}>Pick a clip from Photos</Text>
       </Pressable>
       <Pressable disabled={busy} style={styles.button} onPress={() => run(async () => ({ uri: clipUrl, durationMs: null }))}>
-        <Text style={styles.buttonText}>{clipParam ? 'Use linked clip' : 'Use sample clip (URL)'}</Text>
+        <Text style={styles.buttonText}>{clipParam ? 'Use linked clip' : 'Use example clip (URL)'}</Text>
       </Pressable>
       {log.map((line, index) => (
         <Text key={index} style={styles.log}>

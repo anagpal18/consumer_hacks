@@ -26,8 +26,8 @@ const SAMPLE_GAPS: Gap[] = [
     title: 'Smart shoes',
     reason: 'You own 2 pairs of shoes and none above formality 3.',
     products: [
-      { productId: 'sample_g1', name: 'Brown leather derbies', brandName: 'Sample partner', category: 'shoes', imageUrl: null, priceCents: 14900, summary: 'Plain-toe derbies that dress up trousers or dark denim.', pairsWithCount: 3, colorHex: '#6B4630' },
-      { productId: 'sample_g2', name: 'Black suede loafers', brandName: 'Sample partner', category: 'shoes', imageUrl: null, priceCents: 12900, summary: 'Unlined suede loafers for dinners and the office.', pairsWithCount: 2, colorHex: '#2A2624' },
+      { productId: 'sample_g1', name: 'Brown leather derbies', brandName: 'Wear Again picks', category: 'shoes', imageUrl: null, priceCents: 14900, summary: 'Plain-toe derbies that dress up trousers or dark denim.', pairsWithCount: 3, colorHex: '#6B4630' },
+      { productId: 'sample_g2', name: 'Black suede loafers', brandName: 'Wear Again picks', category: 'shoes', imageUrl: null, priceCents: 12900, summary: 'Unlined suede loafers for dinners and the office.', pairsWithCount: 2, colorHex: '#2A2624' },
     ],
   },
 ];
@@ -70,7 +70,7 @@ export default function SuggestionsScreen() {
         {
           id: 'sample',
           name: SAMPLE_PRODUCT.name,
-          brand: 'Sample partner',
+          brand: 'Wear Again picks',
           colorHex: SAMPLE_PRODUCT.colorHex,
           imageUrl: null as string | null,
           price: SAMPLE_PRODUCT.price,
@@ -98,7 +98,7 @@ export default function SuggestionsScreen() {
                       <Image source={{ uri: product.imageUrl }} style={styles.gapPhoto} contentFit="cover" transition={150} />
                     ) : (
                       <View style={[styles.gapPhoto, styles.hero, { backgroundColor: product.colorHex ?? Colors.mirror }]}>
-                        <Text style={styles.heroLabel}>SAMPLE ITEM</Text>
+                        <Text style={styles.heroLabel}>PICKED FOR YOU</Text>
                       </View>
                     )}
                     <Text style={styles.dealBrand}>{product.brandName}</Text>
@@ -118,7 +118,7 @@ export default function SuggestionsScreen() {
               </ScrollView>
             </View>
           ))}
-          <Text style={styles.note}>Sample listings with illustrative images. Adding copies the piece into your closet; nothing is bought.</Text>
+          <Text style={styles.note}>Adding copies the piece into your closet; nothing is bought.</Text>
         </View>
       ) : null}
 
@@ -129,14 +129,14 @@ export default function SuggestionsScreen() {
             <Image source={{ uri: card.imageUrl }} style={styles.heroPhoto} contentFit="cover" transition={150} />
           ) : (
             <View style={[styles.hero, { backgroundColor: card.colorHex }]}>
-              <Text style={styles.heroLabel}>SAMPLE ITEM</Text>
+              <Text style={styles.heroLabel}>PICKED FOR YOU</Text>
             </View>
           )}
           <View style={styles.row}>
             <Text style={styles.name}>{card.name}</Text>
             <Text style={styles.price}>{card.price}</Text>
           </View>
-          <Pill label={card.brand + ' · sample listing, illustrative image'} />
+          <Pill label={card.brand} />
 
           <Text style={styles.heading}>Why this fits your closet</Text>
           {card.matches.length === 0 ? (
@@ -165,7 +165,7 @@ export default function SuggestionsScreen() {
               router.navigate('/');
             }}
           />
-          <Text style={styles.note}>The preview styles your own pieces. The sample item is not added to the mirror.</Text>
+          <Text style={styles.note}>The preview styles your own pieces. This piece is not added to the mirror.</Text>
         </View>
       ))}
     </ScrollView>

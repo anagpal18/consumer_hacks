@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
-import { category, cropBox, frame, scanError } from "./schema";
+import { category, cropBox, frame, pattern, scanError } from "./schema";
 import {
   checkClosetCode,
   claimMedia,
@@ -28,6 +28,7 @@ async function candidateView(ctx: QueryCtx, c: Doc<"candidates">, idByIndex: Map
     category: c.category,
     subtype: c.subtype,
     color: c.color,
+    pattern: c.pattern,
     colorHex: c.colorHex,
     crop: {
       url: c.cropStorageId ? await ctx.storage.getUrl(c.cropStorageId) : null,
@@ -214,7 +215,8 @@ export const confirm = mutation({
           subtype,
           color,
           colorHex: c.colorHex,
-          renderAssetKey: matchRenderAsset({ category: cat, subtype, colorHex: c.colorHex }),
+          pattern: c.pattern,
+          renderAssetKey: matchRenderAsset({ category: cat, subtype, color, pattern: c.pattern, colorHex: c.colorHex }),
           photoStorageId: c.cropStorageId,
           availability: "available",
           wearCount: 0,
@@ -268,6 +270,7 @@ export const saveCandidates = internalMutation({
         category,
         subtype: v.string(),
         color: v.string(),
+        pattern: v.optional(pattern),
         colorHex: v.optional(v.string()),
         cropBox,
         cropStorageId: v.optional(v.id("_storage")),

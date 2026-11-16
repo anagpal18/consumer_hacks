@@ -83,8 +83,8 @@ export function Pill({ label, tone = 'neutral', icon }: { label: string; tone?: 
 }
 
 /** Shown wherever a screen is rendering sample data instead of the real backend. */
-export function MockBadge({ label = 'Sample data' }: { label?: string }) {
-  return <Pill label={label} tone="mock" icon="flask-outline" />;
+export function MockBadge(_props: { label?: string }) {
+  return null;
 }
 
 function isDark(hex: string) {

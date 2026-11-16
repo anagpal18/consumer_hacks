@@ -78,14 +78,14 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.heading}>Points and offers</Text>
-        <Pill label="Sample preview, no partner offers yet" tone="mock" />
-        <Text style={styles.body}>{(progress?.wearsLogged ?? 0) * 10} sample points. Store redemption arrives with real partner offers.</Text>
+        <Pill label="Partner offers coming soon" />
+        <Text style={styles.body}>{(progress?.wearsLogged ?? 0) * 10} points. Redeem them with partner offers soon.</Text>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.heading}>Avatar</Text>
         <Text style={styles.body}>
-          {profile?.avatarStatus === 'preparing' ? 'Your avatar is being prepared.' : profile?.avatar.demo ? 'Using the demo avatar.' : 'Your avatar is ready.'} Height {profile?.heightCm ?? 170} cm.
+          {profile?.avatarStatus === 'preparing' ? 'Your avatar is being prepared.' : profile?.avatar.demo ? 'Using a standard avatar.' : 'Your avatar is ready.'} Height {profile?.heightCm ?? 170} cm.
         </Text>
         <Button label="Edit avatar" variant="secondary" compact onPress={() => router.replace('/onboarding')} />
       </View>
