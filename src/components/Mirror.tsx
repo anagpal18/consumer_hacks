@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, MIRROR_ASSETS, TINT_TEMPLATES } from '@/mirror/assets';
+import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, DRESSED_AVATARS, MIRROR_ASSETS, PREFERRED_AVATAR_KEY, TINT_TEMPLATES } from '@/mirror/assets';
 import { loadAssetSource } from '@/mirror/loadAsset';
 import { MirrorSurface, type MirrorSurfaceHandle } from '@/mirror/MirrorSurface';
 import type { HostMessage, ViewerGarment, ViewerMessage } from '@/mirror/protocol';
@@ -52,7 +52,8 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<MirrorState>({ status: 'loading' });
 
-  const avatarKey = AVATAR_ASSETS[avatar.key] ? avatar.key : DEFAULT_AVATAR_KEY;
+  const avatarKey = avatar.demo || !AVATAR_ASSETS[avatar.key] ? (AVATAR_ASSETS[PREFERRED_AVATAR_KEY] ? PREFERRED_AVATAR_KEY : DEFAULT_AVATAR_KEY) : avatar.key;
+  const dressed = DRESSED_AVATARS.has(avatarKey);
   const showDemoLabel = avatar.demo || avatarKey !== avatar.key;
   const keysSignature = garmentAssetKeys.join('|');
   const garmentsSignature = JSON.stringify(garments ?? null);
@@ -75,17 +76,17 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
     try {
       const avatarSrc = sent.current.has(avatarKey) ? null : await loadAssetSource(AVATAR_ASSETS[avatarKey]);
       const list: ViewerGarment[] = [];
-      for (const w of outfit.worn) {
+      for (const w of dressed ? [] : outfit.worn) {
         const src = sent.current.has(w.asset) ? undefined : await loadAssetSource(MIRROR_ASSETS[w.asset].asset);
         list.push({ id: w.id, slot: w.slot, asset: w.asset, bit: w.bit, tint: w.tint, src });
       }
       send({ type: 'scene', avatarId: avatarKey, avatarSrc, garments: list });
       sent.current.add(avatarKey);
-      for (const w of outfit.worn) sent.current.add(w.asset);
+      if (!dressed) for (const w of outfit.worn) sent.current.add(w.asset);
     } catch (e) {
       report({ status: 'error', message: e instanceof Error ? e.message : 'Could not load the mirror assets.' });
     }
-  }, [avatarKey, outfit, send, report]);
+  }, [avatarKey, dressed, outfit, send, report]);
 
   const retry = useCallback(() => {
     booted.current = false;
@@ -136,7 +137,7 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
     return () => clearTimeout(timer);
   }, [state.status, attempt, report]);
 
-  const notes = [
+  const notes = dressed ? ['The avatar wears its own outfit. Your pieces are shown as photos.'] : [
     ...outfit.worn.flatMap((w) => (w.approximate ? ['Approximate: ' + w.approximate] : [])),
     ...outfit.skipped.map((label) => 'Not shown: ' + label),
   ];

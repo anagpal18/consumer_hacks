@@ -46,6 +46,19 @@ export const TINT_TEMPLATES: Record<RenderSlot, string> = {
 
 export const DEFAULT_AVATAR_KEY = 'demo/avatar-a';
 
+/** Avaturn export that arrives already dressed (body, hair, shoes and one outfit mesh). */
+export const DRESSED_AVATAR_KEY = 'demo/avatar-b';
+
 export const AVATAR_ASSETS: Record<string, number> = {
   [DEFAULT_AVATAR_KEY]: require('../../assets/mirror/avatar-a.glb'),
+  [DRESSED_AVATAR_KEY]: require('../../assets/mirror/avatar-b.glb'),
 };
+
+/**
+ * Avatars whose clothes are part of the model. The garment GLBs were baked on avatar-a's
+ * body and pose, so they are not drawn over these; the outfit's pieces show as photos instead.
+ */
+export const DRESSED_AVATARS = new Set<string>([DRESSED_AVATAR_KEY]);
+
+/** EXPO_PUBLIC_MIRROR_AVATAR=a keeps the swappable-garment body; anything else uses the Avaturn avatar. */
+export const PREFERRED_AVATAR_KEY = process.env.EXPO_PUBLIC_MIRROR_AVATAR === 'a' ? DEFAULT_AVATAR_KEY : DRESSED_AVATAR_KEY;
