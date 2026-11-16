@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { availability, category } from "./schema";
 import {
   claimMedia,
   defaultName,
+  fail,
   ensureProfile,
   findProfile,
   itemView,
@@ -103,6 +104,19 @@ export const updateItem = mutation({
     if (fields.category && fields.isPrivate === undefined) fields.isPrivate = PRIVATE_CATEGORIES.includes(fields.category);
     await ctx.db.patch("items", itemId, fields);
     return await itemView(ctx, (await ctx.db.get(itemId))!);
+  },
+});
+
+/** Attaches an uploaded photo to an existing item (for example a starter item seeded without one). Run with `npx convex run`. */
+export const setItemPhoto = internalMutation({
+  args: { itemId: v.id("items"), photoStorageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.itemId);
+    if (!item) fail("NOT_FOUND", "That item is gone.");
+    await claimMedia(ctx, item.ownerId, args.photoStorageId, "photo");
+    await ctx.db.patch("items", item._id, { photoStorageId: args.photoStorageId });
+    await ctx.scheduler.runAfter(0, internal.describe.item, { itemId: item._id });
+    return { itemId: item._id, photoStorageId: args.photoStorageId };
   },
 });
 
