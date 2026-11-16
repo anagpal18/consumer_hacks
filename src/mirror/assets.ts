@@ -14,22 +14,23 @@ export type MirrorAsset = RenderAssetMeta & {
   /** Bit of this garment in the _HIDE vertex masks baked into the GLBs. */
   bit: number;
   label: string;
-  /** Set when the mesh only approximates the item; shown in the viewer. */
-  approximate?: string;
 };
 
-const FILES: Record<string, { asset: number; bit: number; label: string; approximate?: string }> = {
+const FILES: Record<string, { asset: number; bit: number; label: string }> = {
   'demo/jacket-denim': { asset: require('../../assets/mirror/jacket-denim.glb'), bit: 1, label: 'Denim jacket' },
   'demo/shirt-white': { asset: require('../../assets/mirror/shirt-white.glb'), bit: 2, label: 'White oxford shirt' },
   'demo/tee-black': { asset: require('../../assets/mirror/tee-black.glb'), bit: 4, label: 'Black t-shirt' },
   'demo/trousers-charcoal': { asset: require('../../assets/mirror/trousers-charcoal.glb'), bit: 8, label: 'Charcoal trousers' },
   'demo/sneakers-white': { asset: require('../../assets/mirror/sneakers-white.glb'), bit: 16, label: 'White sneakers' },
-  'demo/boots-brown': {
-    asset: require('../../assets/mirror/boots-brown.glb'),
-    bit: 32,
-    label: 'Brown leather boots',
-    approximate: 'Brown leather boots shown as low leather shoes',
-  },
+  'demo/boots-brown': { asset: require('../../assets/mirror/boots-brown.glb'), bit: 32, label: 'Brown leather boots' },
+  'demo/hoodie-grey-zip': { asset: require('../../assets/mirror/hoodie-grey-zip.glb'), bit: 1, label: 'Grey zip hoodie' },
+  'demo/blazer-navy': { asset: require('../../assets/mirror/blazer-navy.glb'), bit: 1, label: 'Navy blazer' },
+  'demo/shirt-lightblue': { asset: require('../../assets/mirror/shirt-lightblue.glb'), bit: 2, label: 'Light blue dress shirt' },
+  'demo/flannel-navy-plaid': { asset: require('../../assets/mirror/flannel-navy-plaid.glb'), bit: 2, label: 'Navy plaid flannel' },
+  'demo/jeans-darkwash': { asset: require('../../assets/mirror/jeans-darkwash.glb'), bit: 8, label: 'Dark-wash jeans' },
+  'demo/blazer-tan-check': { asset: require('../../assets/mirror/blazer-tan-check.glb'), bit: 1, label: 'Tan check blazer' },
+  'demo/tee-beige': { asset: require('../../assets/mirror/tee-beige.glb'), bit: 4, label: 'Beige t-shirt' },
+  'demo/pants-khaki-drawstring': { asset: require('../../assets/mirror/pants-khaki-drawstring.glb'), bit: 8, label: 'Khaki drawstring pants' },
 };
 
 export const MIRROR_ASSETS: Record<string, MirrorAsset> = Object.fromEntries(
@@ -61,7 +62,7 @@ export const BODY_TYPES: BodyType[] = [
   { key: 'body/female-5', gender: 'female', label: 'Plus', asset: require('../../assets/mirror/bodies/female_5_plus.glb'), shoulders: 44, waist: 46, hips: 54 },
 ];
 
-/** The onboarding mannequins. Garment meshes are fitted to avatar-a, so on these the pieces show as photos. */
+/** The onboarding mannequins. Garment meshes are fitted to avatar-a, so the mirror shows avatar-a wearing them for these profiles. */
 export const isMannequin = (key: string | undefined) => !!key && key.startsWith('body/');
 
 export const DEFAULT_AVATAR_KEY = 'demo/avatar-a';
@@ -80,7 +81,7 @@ export const AVATAR_ASSETS: Record<string, number> = {
  * Avatars whose clothes are part of the model. The garment GLBs were baked on avatar-a's
  * body and pose, so they are not drawn over these; the outfit's pieces show as photos instead.
  */
-export const DRESSED_AVATARS = new Set<string>([DRESSED_AVATAR_KEY, ...BODY_TYPES.map((b) => b.key)]);
+export const DRESSED_AVATARS = new Set<string>([DRESSED_AVATAR_KEY]);
 
 /** EXPO_PUBLIC_MIRROR_AVATAR=b opts in to the Avaturn avatar; the default keeps the swappable-garment body. */
 export const PREFERRED_AVATAR_KEY = process.env.EXPO_PUBLIC_MIRROR_AVATAR === 'b' ? DRESSED_AVATAR_KEY : DEFAULT_AVATAR_KEY;
