@@ -49,7 +49,10 @@ export function colorFamily(hex: string | undefined): ColorFamily | undefined {
   return "pink";
 }
 
-type ScanMatchInput = { category: Category; subtype: string; color?: string; pattern?: string; colorHex?: string };
+type ScanMatchInput = { category: Category; subtype: string; color?: string; pattern?: string; colorHex?: string; confidence?: number };
+
+/** Detections below this confidence (partly hidden or edge-of-frame pieces) keep the tinted stand-in instead of a mesh. */
+export const MATCH_MIN_CONFIDENCE = 0.9;
 
 const has = (text: string, words: string[]) => words.some((w) => new RegExp(`(^|[^a-z])${w}([^a-z]|$)`).test(text));
 
@@ -81,6 +84,24 @@ const SCAN_RULES: { key: string; categories: Category[]; match: (subtype: string
     match: (s, c, p) => has(s, ["blazer", "suit jacket", "sport coat", "sports coat"]) && has(c, ["navy"]) && (p === "" || p === "solid"),
   },
   {
+    key: "demo/blazer-tan-check",
+    categories: ["outerwear"],
+    match: (s, c, p) =>
+      has(s, ["blazer", "suit jacket", "sport coat", "sports coat"]) &&
+      has(c, ["tan", "beige", "brown", "camel", "khaki", "sand"]) &&
+      (p === "check" || p === "plaid" || has(s, ["check", "plaid", "windowpane"])),
+  },
+  {
+    key: "demo/tee-beige",
+    categories: ["top"],
+    match: (s, c, p) => has(s, ["t-shirt", "tee"]) && has(c, ["beige", "stone", "sand", "khaki", "tan", "oatmeal"]) && (p === "" || p === "solid"),
+  },
+  {
+    key: "demo/pants-khaki-drawstring",
+    categories: ["bottom"],
+    match: (s, c) => has(s, ["pants", "trousers", "chinos", "joggers"]) && has(c, ["khaki", "olive", "tan", "beige", "sand"]),
+  },
+  {
     key: "demo/jeans-darkwash",
     categories: ["bottom"],
     match: (s, c) => has(s, ["jeans"]) && has(c, ["dark blue", "dark wash", "indigo", "navy", "dark denim", "dark indigo"]),
@@ -91,6 +112,7 @@ export const SCAN_RENDER_KEYS = SCAN_RULES.map((r) => r.key);
 
 export function matchRenderAsset(item: ScanMatchInput): string | undefined {
   if (item.category === "underwear" || item.category === "socks") return undefined;
+  if (item.confidence !== undefined && item.confidence < MATCH_MIN_CONFIDENCE) return undefined;
   const subtype = item.subtype.trim().toLowerCase();
   const color = (item.color ?? "").trim().toLowerCase();
   const pattern = (item.pattern ?? "").trim().toLowerCase();

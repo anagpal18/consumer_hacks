@@ -216,7 +216,7 @@ export const confirm = mutation({
           color,
           colorHex: c.colorHex,
           pattern: c.pattern,
-          renderAssetKey: matchRenderAsset({ category: cat, subtype, color, pattern: c.pattern, colorHex: c.colorHex }),
+          renderAssetKey: matchRenderAsset({ category: cat, subtype, color, pattern: c.pattern, colorHex: c.colorHex, confidence: c.confidence }),
           photoStorageId: c.cropStorageId,
           availability: "available",
           wearCount: 0,
