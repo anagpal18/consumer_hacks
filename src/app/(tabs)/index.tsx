@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Mirror } from '@/components/Mirror';
@@ -53,6 +53,7 @@ export default function HomeScreen() {
   const unavailable = items.find((item) => item.availability !== 'available');
 
   async function suggest(text: string) {
+    Keyboard.dismiss();
     if (text.trim()) setSession({ homeNotice: null });
     setBusy(true);
     setMessage(null);
@@ -90,6 +91,7 @@ export default function HomeScreen() {
   /** Change exactly one piece: every other piece is sent as locked. */
   async function replaceItem(item: ClosetItem, cause: 'change' | 'laundry') {
     if (!outfit) return;
+    Keyboard.dismiss();
     const others = outfit.itemIds.filter((id) => id !== item.itemId);
     const label = CATEGORY_LABEL[item.category];
     const kept = byId(others.find((id) => locked.includes(id)) ?? others[0]);
@@ -150,6 +152,7 @@ export default function HomeScreen() {
 
   async function confirmWear() {
     if (!outfit) return;
+    Keyboard.dismiss();
     const key = outfit.itemIds.join('+');
     if (wearRequest.current.key !== key) wearRequest.current = { key, id: `wear_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` };
     setBusy(true);
