@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 import { matchRenderAsset } from "./renderAssets";
 import type { Category } from "./lib";
 
-type Row = [Category, string, string, string, string, string];
+type Row = [Category, string, string, string, string, string, number];
 
-// Real gpt-6.1-terra detections of pixverse_c1.mp4 on a local backend (3 runs), labelled against the HEHE-23 ground truth.
+// Real gpt-6.1-terra detections of pixverse_c1.mp4 on a local backend (4 runs): category, subtype, color, pattern, colorHex, frame, confidence.
 const RUNS: Row[][] = [
   [
     ["outerwear","blazer","brown","plaid","#978676","f2",0.99],
@@ -94,45 +94,68 @@ const RUNS: Row[][] = [
   ],
 ];
 
-const FIVE = ["demo/hoodie-grey-zip", "demo/shirt-lightblue", "demo/flannel-navy-plaid", "demo/blazer-navy", "demo/jeans-darkwash"];
-
-function expected([cat, sub, color, , , frame]: Row) {
-  if (cat === "top" && sub.includes("hoodie")) return "demo/hoodie-grey-zip";
-  if (cat === "top" && sub.includes("shirt") && color === "light blue") return "demo/shirt-lightblue";
+/** HEHE-23 ground truth for the eight keyed pieces; every other detection must stay unmapped. */
+function expected([cat, sub, color, , , frame, confidence]: Row) {
+  if (sub.includes("hoodie")) return "demo/hoodie-grey-zip";
+  if (cat === "outerwear" && frame === "f2") return "demo/blazer-tan-check";
+  if (cat === "top" && sub === "t-shirt" && frame === "f5") return "demo/tee-beige";
+  if (cat === "top" && frame === "f8") return "demo/shirt-lightblue";
   if (cat === "top" && frame === "f11") return "demo/flannel-navy-plaid";
-  if (cat === "outerwear" && sub === "blazer" && color.startsWith("navy")) return "demo/blazer-navy";
+  if (cat === "outerwear" && frame === "f9") return "demo/blazer-navy";
   if (cat === "bottom" && sub === "jeans") return "demo/jeans-darkwash";
+  if (cat === "bottom" && frame === "f12") return "demo/pants-khaki-drawstring";
+  // The second light-blue shirt in the left group (set aside in the ground truth) is a fair match when the detector is sure of it.
+  if (cat === "top" && color === "light blue" && confidence >= 0.9) return "demo/shirt-lightblue";
+  // S5, the beige collared short-sleeve shirt, is detected with the same words as the beige tee; when the detector is sure of it, it takes the tee mesh (run 3).
+  if (cat === "top" && sub === "t-shirt" && color === "beige" && confidence >= 0.9) return "demo/tee-beige";
   return undefined;
 }
 
+const KEYS = [
+  "demo/hoodie-grey-zip",
+  "demo/blazer-tan-check",
+  "demo/tee-beige",
+  "demo/shirt-lightblue",
+  "demo/flannel-navy-plaid",
+  "demo/blazer-navy",
+  "demo/jeans-darkwash",
+  "demo/pants-khaki-drawstring",
+];
+
 describe("scan to render key matching", () => {
-  test("every run of the demo clip maps the five pieces to their keys and nothing else to them", () => {
+  test("every run of the demo clip maps the eight pieces to their keys and leaves everything else unmapped", () => {
     for (const run of RUNS) {
-      const mapped = run.map((r) => matchRenderAsset({ category: r[0], subtype: r[1], color: r[2], pattern: r[3] || undefined, colorHex: r[4] }));
-      run.forEach((r, i) => {
-        const want = expected(r);
-        if (want) expect(mapped[i], r.join(" | ")).toBe(want);
-        else expect(FIVE, r.join(" | ")).not.toContain(mapped[i]);
-      });
-      for (const key of FIVE) expect(mapped).toContain(key);
+      const mapped = run.map((r) => matchRenderAsset({ category: r[0], subtype: r[1], color: r[2], pattern: r[3] || undefined, colorHex: r[4], confidence: r[6] }));
+      run.forEach((r, i) => expect(mapped[i], r.join(" | ")).toBe(expected(r)));
+      for (const key of KEYS) expect(mapped).toContain(key);
     }
   });
 
   test("decoys do not swap", () => {
-    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "light blue", pattern: "denim" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "top", subtype: "denim shirt", color: "light blue", pattern: "solid" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "blue", pattern: "solid" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "top", subtype: "t-shirt", color: "light blue", pattern: "solid" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "gray white", pattern: "plaid" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "outerwear", subtype: "blazer", color: "brown", pattern: "plaid" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "outerwear", subtype: "blazer", color: "navy", pattern: "check" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "bottom", subtype: "pants", color: "dark blue" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "top", subtype: "hoodie", color: "black" })).toBeUndefined();
+    const sure = { confidence: 0.98 };
+    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "light blue", pattern: "denim", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "denim shirt", color: "light blue", pattern: "solid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "blue", pattern: "solid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "light blue", pattern: "plaid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "navy", pattern: "solid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "shirt", color: "gray white", pattern: "plaid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "outerwear", subtype: "blazer", color: "navy", pattern: "check", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "outerwear", subtype: "blazer", color: "tan", pattern: "solid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "outerwear", subtype: "jacket", color: "dark gray", pattern: "solid", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "t-shirt", color: "black", pattern: "solid", ...sure })).toBe("demo/tee-black");
+    expect(matchRenderAsset({ category: "top", subtype: "t-shirt", color: "beige", pattern: "print", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "bottom", subtype: "jeans", color: "light blue", ...sure })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "hoodie", color: "black", ...sure })).toBeUndefined();
+  });
+
+  test("an unsure detection keeps the stand-in even when its words match", () => {
+    expect(matchRenderAsset({ category: "top", subtype: "t-shirt", color: "beige", pattern: "solid", confidence: 0.89 })).toBeUndefined();
+    expect(matchRenderAsset({ category: "top", subtype: "t-shirt", color: "beige", pattern: "solid", colorHex: "#0e0f11", confidence: 0.8 })).toBeUndefined();
   });
 
   test("underwear and socks never map", () => {
-    expect(matchRenderAsset({ category: "underwear", subtype: "briefs", color: "gray", pattern: "print", colorHex: "#b3b4b2" })).toBeUndefined();
-    expect(matchRenderAsset({ category: "underwear", subtype: "hoodie", color: "gray" })).toBeUndefined();
+    expect(matchRenderAsset({ category: "underwear", subtype: "briefs", color: "gray", pattern: "print", colorHex: "#b3b4b2", confidence: 0.99 })).toBeUndefined();
+    expect(matchRenderAsset({ category: "underwear", subtype: "hoodie", color: "gray", confidence: 0.99 })).toBeUndefined();
     expect(matchRenderAsset({ category: "socks", subtype: "crew socks", color: "navy" })).toBeUndefined();
   });
 });

@@ -201,7 +201,7 @@ export default function HomeScreen() {
   if (profile && !profile.onboarded) return <Redirect href="/onboarding" />;
 
   const onMannequin = isMannequin(profile?.avatar?.key);
-  const approximate = onMannequin ? items : items.filter((item) => !item.renderAssetKey);
+  const approximate = items.filter((item) => !item.renderAssetKey);
   const topChallenge = saved?.challenge[0];
   const turn = (yaw: number, zoom: number) => {
     setView({ yaw, zoom });

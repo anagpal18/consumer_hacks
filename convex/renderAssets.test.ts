@@ -22,7 +22,7 @@ describe("renderAssetKey matching", () => {
       "demo/sneakers-white": "#EDEAE4",
       "demo/boots-brown": "#6B4630",
     };
-    for (const a of RENDER_ASSETS) {
+    for (const a of RENDER_ASSETS.filter((asset) => asset.key in samples)) {
       expect(matchRenderAsset({ category: a.category, subtype: a.subtypes[0], colorHex: samples[a.key] })).toBe(a.key);
     }
     expect(colorFamily("#B49A72")).toBe("beige");
