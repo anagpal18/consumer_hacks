@@ -286,6 +286,27 @@ export const deals = query({
   },
 });
 
+/** Deals: a brand's wearable products, so each deal can show what it applies to. */
+export const brandProducts = query({
+  args: { brandSlug: v.string() },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db.query("products").withIndex("by_brandSlug", (q) => q.eq("brandSlug", args.brandSlug)).take(50);
+    const out = [];
+    for (const p of rows) {
+      if (!isWearable(p)) continue;
+      out.push({
+        productId: p._id,
+        name: p.name,
+        category: p.category,
+        colorHex: p.colorHex,
+        priceCents: p.priceCents,
+        imageUrl: p.imageStorageId ? await ctx.storage.getUrl(p.imageStorageId) : null,
+      });
+    }
+    return out;
+  },
+});
+
 export const feed = query({
   args: { limit: v.optional(v.number()), after: v.optional(v.number()) },
   handler: async (ctx, args) => {
