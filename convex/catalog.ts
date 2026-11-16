@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
-import { category as categoryValidator } from "./schema";
-import { findProfile, type Category } from "./lib";
+import { internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { category as categoryValidator, cut as cutValidator, descriptor as descriptorValidator } from "./schema";
+import { ensureProfile, fail, findProfile, type Category } from "./lib";
 import { colorFamily } from "./renderAssets";
 
 /**
@@ -198,11 +199,13 @@ export const importPhotographed = internalMutation({
         colorHex: v.string(),
         priceCents: v.number(),
         imageStorageId: v.id("_storage"),
+        cut: v.optional(cutValidator),
+        descriptor: v.optional(descriptorValidator),
       }),
     ),
   },
   handler: async (ctx, args) => {
-    for (const table of ["brands", "deals", "products", "feedPosts"] as const) {
+    for (const table of ["brands", "deals", "products", "feedPosts", "postLikes"] as const) {
       for (const row of await ctx.db.query(table).take(1000)) await ctx.db.delete(table, row._id);
     }
     const r = rng(11);
@@ -216,22 +219,23 @@ export const importPhotographed = internalMutation({
       await ctx.db.insert("deals", { brandSlug: slug, title: `${pct}% off your next order`, description: `Sample offer from ${name}. Redeem with Wear Again points.`, code: `SAMPLE-${slug.toUpperCase()}-${pct}`, discountPct: pct, pointsCost: 300, expiresAt: now + 14 * 86_400_000 });
       await ctx.db.insert("deals", { brandSlug: slug, title: "Free repair or alteration", description: `Keep a ${name} piece going instead of replacing it.`, code: `SAMPLE-${slug.toUpperCase()}-FIX`, discountPct: 0, pointsCost: 500, expiresAt: now + 30 * 86_400_000 });
     }
-    for (const p of args.products) await ctx.db.insert("products", { ...p, pairsWith: PAIRS[p.category] ?? ["top", "bottom"] });
+    const inserted: ((typeof args.products)[number] & { _id: Id<"products"> })[] = [];
+    for (const p of args.products) inserted.push({ ...p, _id: await ctx.db.insert("products", { ...p, pairsWith: PAIRS[p.category] ?? ["top", "bottom"] }) });
 
-    const by = (cat: string, slug?: string) => args.products.filter((p) => p.category === cat && (!slug || p.brandSlug === slug));
+    const wearable = inserted.filter((p) => p.cut !== "womens" && p.category !== "dress");
+    const by = (cat: string, slug?: string) => wearable.filter((p) => p.category === cat && (!slug || p.brandSlug === slug));
     const POSTS = 48;
     for (let i = 0; i < POSTS; i++) {
-      const kind = i % 3 === 0 ? ("brand" as const) : i % 3 === 1 ? ("friend" as const) : ("creator" as const);
+      const kind = "brand" as const;
       const slug = slugs[i % slugs.length];
       const from = (cat: string) => {
         const own = kind === "brand" ? by(cat, slug) : [];
         return own.length ? pick(own) : by(cat).length ? pick(by(cat)) : undefined;
       };
-      const useDress = r() < 0.2 && by("dress").length > 0;
-      const look = (useDress ? [from("outerwear"), from("dress"), from("shoes")] : [from("outerwear"), from("top"), from("bottom"), from("shoes")]).filter(
-        (p): p is (typeof args.products)[number] => !!p,
+      const look = (i % 2 === 0 ? [from("outerwear"), from("top"), from("bottom"), from("shoes")] : [from("top"), from("bottom"), from("shoes")]).filter(
+        (p): p is (typeof inserted)[number] => !!p,
       );
-      const author = kind === "brand" ? (BRAND_INFO[slug]?.[0] ?? slug) : kind === "friend" ? pick(PEOPLE) : pick(CREATORS);
+      const author = BRAND_INFO[slug]?.[0] ?? slug;
       const [caption, prompt] = pick(PLANS);
       await ctx.db.insert("feedPosts", {
         rank: i,
@@ -243,6 +247,7 @@ export const importPhotographed = internalMutation({
         prompt,
         swatches: look.map((p) => p.colorHex),
         imageStorageIds: look.map((p) => p.imageStorageId),
+        productIds: look.map((p) => p._id),
         pieces: look.map((p) => `${BRAND_INFO[p.brandSlug]?.[0] ?? p.brandSlug} ${p.name}`),
         likes: 12 + Math.floor(r() * 900),
       });
@@ -327,7 +332,7 @@ export const recommend = query({
         )
       : [];
     const names = new Map((await ctx.db.query("brands").take(100)).map((b) => [b.slug, b.name] as const));
-    const products = await ctx.db.query("products").take(300);
+    const products = (await ctx.db.query("products").take(300)).filter(isWearable);
     const neutral = new Set(["black", "white", "grey", "beige", "brown"]);
     const scored = products
       .filter((p) => !owned.some((i) => i.subtype === p.subtype && colorFamily(i.colorHex) === colorFamily(p.colorHex)))
@@ -378,3 +383,254 @@ export const recommend = query({
     }));
   },
 });
+
+
+// ---------------------------------------------------------------------------------------------
+// Menswear reels, likes, add-to-closet and closet gaps. Profiles are menswear for now, so nothing
+// cut for women (and no dresses) is returned anywhere below.
+
+type Traits = { formality: number; warmth: number };
+
+const isWearable = (x: { cut?: string; category: string }) => x.cut !== "womens" && x.category !== "dress";
+
+/** Descriptor values when the photo was described, otherwise a guess from the subtype. */
+export function traits(x: { subtype: string; category: string; descriptor?: Doc<"products">["descriptor"] }): Traits {
+  if (x.descriptor) return { formality: x.descriptor.formality, warmth: x.descriptor.warmth };
+  const s = x.subtype.toLowerCase();
+  const formality = /blazer|overcoat|derb|loafer|oxford|poplin|dress shirt|tailored|merino|turtleneck|suit/.test(s)
+    ? 4
+    : /sneaker|hoodie|jogger|shorts|t-?shirt|tee|running|training|sweatshirt|legging|sock/.test(s)
+      ? 1
+      : /jeans|cargo|polo|flannel|denim|fleece|windbreaker|bomber|chelsea|boot/.test(s)
+        ? 2
+        : 3;
+  const warmth = /overcoat|puffer|parka|down|sherpa|coat/.test(s)
+    ? 5
+    : /fleece|sweater|knit|cardigan|crewneck|hoodie|turtleneck/.test(s)
+      ? 3
+      : /jacket|bomber|overshirt|windbreaker|shell|vest/.test(s)
+        ? 3
+        : /shorts|resort|linen|t-?shirt|tee|polo/.test(s)
+          ? 1
+          : 2;
+  return { formality, warmth };
+}
+
+async function ownedItems(ctx: QueryCtx, ownerId: Id<"profiles">) {
+  return (await ctx.db.query("items").withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId)).take(500)).filter(
+    (i) => i.availability !== "retired" && !i.isPrivate,
+  );
+}
+
+async function brandNames(ctx: QueryCtx) {
+  return new Map((await ctx.db.query("brands").take(100)).map((b) => [b.slug, b.name] as const));
+}
+
+export const reels = query({
+  args: { closetCode: v.string(), limit: v.optional(v.number()), after: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 10, 1), 30);
+    const profile = await findProfile(ctx, args.closetCode);
+    const liked = new Set<string>();
+    const ownedProducts = new Set<string>();
+    if (profile) {
+      for await (const l of ctx.db.query("postLikes").withIndex("by_ownerId_and_postId", (q) => q.eq("ownerId", profile._id))) liked.add(l.postId);
+      for (const i of await ownedItems(ctx, profile._id)) if (i.sourceProductId) ownedProducts.add(i.sourceProductId);
+    }
+    const names = await brandNames(ctx);
+    const posts: Doc<"feedPosts">[] = [];
+    let cursor = args.after ?? -1;
+    while (posts.length < limit) {
+      const page = await ctx.db.query("feedPosts").withIndex("by_rank", (q) => q.gt("rank", cursor)).take(limit * 2);
+      if (!page.length) break;
+      for (const p of page) if (p.kind === "brand" && p.productIds?.length && posts.length < limit) posts.push(p);
+      cursor = page[page.length - 1].rank;
+      if (page.length < limit * 2) break;
+    }
+    const out = [];
+    for (const p of posts) {
+      const pieces = [];
+      for (const id of p.productIds ?? []) {
+        const prod = await ctx.db.get(id);
+        if (!prod || !isWearable(prod)) continue;
+        pieces.push({
+          productId: prod._id,
+          name: prod.name,
+          brandName: names.get(prod.brandSlug) ?? prod.brandSlug,
+          category: prod.category,
+          imageUrl: prod.imageStorageId ? await ctx.storage.getUrl(prod.imageStorageId) : null,
+          priceCents: prod.priceCents,
+          summary: prod.descriptor?.summary ?? "",
+          inCloset: ownedProducts.has(prod._id),
+        });
+      }
+      if (!pieces.length) continue;
+      out.push({
+        postId: p._id,
+        rank: p.rank,
+        brandSlug: p.brandSlug ?? "",
+        brandName: names.get(p.brandSlug ?? "") ?? p.author,
+        caption: p.caption,
+        prompt: p.prompt,
+        likes: p.likes,
+        likedByMe: liked.has(p._id),
+        pieces,
+        sample: true as const,
+      });
+    }
+    return { posts: out, next: posts.length === limit ? posts[posts.length - 1].rank : null };
+  },
+});
+
+export const toggleLike = mutation({
+  args: { closetCode: v.string(), postId: v.id("feedPosts") },
+  handler: async (ctx, args) => {
+    const profile = await ensureProfile(ctx, args.closetCode);
+    const post = await ctx.db.get(args.postId);
+    if (!post) fail("NOT_FOUND", "That post is gone.");
+    const existing = await ctx.db
+      .query("postLikes")
+      .withIndex("by_ownerId_and_postId", (q) => q.eq("ownerId", profile._id).eq("postId", args.postId))
+      .unique();
+    if (existing) {
+      await ctx.db.delete("postLikes", existing._id);
+      await ctx.db.patch("feedPosts", post._id, { likes: Math.max(0, post.likes - 1) });
+      return { liked: false, likes: Math.max(0, post.likes - 1) };
+    }
+    await ctx.db.insert("postLikes", { ownerId: profile._id, postId: args.postId });
+    await ctx.db.patch("feedPosts", post._id, { likes: post.likes + 1 });
+    return { liked: true, likes: post.likes + 1 };
+  },
+});
+
+/**
+ * Copies a catalog product into the closet with its photo and descriptor, so the stylist can use it.
+ * The photo stays the catalog's file: it is not claimed as the user's media, so deleting the item
+ * never deletes the shared product image.
+ */
+export const addToCloset = mutation({
+  args: { closetCode: v.string(), productId: v.id("products") },
+  handler: async (ctx, args) => {
+    const profile = await ensureProfile(ctx, args.closetCode);
+    const product = await ctx.db.get(args.productId);
+    if (!product) fail("NOT_FOUND", "That product is gone.");
+    const owned = await ctx.db.query("items").withIndex("by_ownerId", (q) => q.eq("ownerId", profile._id)).take(500);
+    const existing = owned.find((i) => i.sourceProductId === product._id && i.availability !== "retired");
+    if (existing) return { itemId: existing._id, alreadyOwned: true };
+    const brand = (await brandNames(ctx)).get(product.brandSlug) ?? product.brandSlug;
+    const itemId = await ctx.db.insert("items", {
+      ownerId: profile._id,
+      name: `${brand} ${product.name.charAt(0).toLowerCase()}${product.name.slice(1)}`,
+      category: product.category,
+      subtype: product.subtype,
+      color: product.color,
+      colorHex: product.colorHex,
+      photoStorageId: product.imageStorageId,
+      availability: "available",
+      wearCount: 0,
+      wearsSinceWash: 0,
+      isPrivate: false,
+      cut: product.cut,
+      descriptor: product.descriptor,
+      sourceProductId: product._id,
+    });
+    return { itemId, alreadyOwned: false };
+  },
+});
+
+type GapRule = {
+  gapId: string;
+  title: string;
+  /** Returns the reason when the closet has this gap, else null. */
+  check: (owned: (Doc<"items"> & Traits)[]) => string | null;
+  fits: (p: Doc<"products"> & Traits) => boolean;
+};
+
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+const GAP_RULES: GapRule[] = [
+  {
+    gapId: "smart-shoes",
+    title: "Smart shoes",
+    check: (o) => {
+      const shoes = o.filter((i) => i.category === "shoes");
+      return shoes.some((i) => i.formality >= 4) ? null : `You own ${count(shoes.length, "pair of shoes", "pairs of shoes")} and none dressy enough for the office or a dinner.`;
+    },
+    fits: (p) => p.category === "shoes" && p.formality >= 4,
+  },
+  {
+    gapId: "warm-coat",
+    title: "A warm coat",
+    check: (o) => (o.some((i) => i.category === "outerwear" && i.warmth >= 4) ? null : "Nothing in your closet is warm enough for a cold day."),
+    fits: (p) => p.category === "outerwear" && p.warmth >= 4,
+  },
+  {
+    gapId: "more-tops",
+    title: "More tops to rotate",
+    check: (o) => {
+      const tops = o.filter((i) => i.category === "top").length;
+      return tops >= 4 ? null : `You have ${count(tops, "top", "tops")}, so the same one keeps coming back.`;
+    },
+    fits: (p) => p.category === "top",
+  },
+  {
+    gapId: "casual-bottoms",
+    title: "Easy weekend bottoms",
+    check: (o) => (o.some((i) => i.category === "bottom" && i.formality <= 2) ? null : "Every pair of trousers you own is on the smart side."),
+    fits: (p) => p.category === "bottom" && p.formality <= 2,
+  },
+  {
+    gapId: "smart-layer",
+    title: "A smart layer",
+    check: (o) => (o.some((i) => i.category === "outerwear" && i.formality >= 4) ? null : "You have no blazer or tailored coat for meetings and dinners."),
+    fits: (p) => p.category === "outerwear" && p.formality >= 4,
+  },
+  {
+    gapId: "knitwear",
+    title: "A knit for cooler days",
+    check: (o) => (o.some((i) => i.category === "top" && i.warmth >= 3) ? null : "None of your tops are warm on their own."),
+    fits: (p) => p.category === "top" && p.warmth >= 3,
+  },
+];
+
+/** Shop: what the closet is missing, each gap with the catalog pieces that fill it best. */
+export const gaps = query({
+  args: { closetCode: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await findProfile(ctx, args.closetCode);
+    const owned = profile ? (await ownedItems(ctx, profile._id)).filter(isWearable).map((i) => ({ ...i, ...traits(i) })) : [];
+    const ownedProducts = new Set(owned.map((i) => i.sourceProductId).filter(Boolean));
+    const products = (await ctx.db.query("products").take(300))
+      .filter((p) => isWearable(p) && !ownedProducts.has(p._id))
+      .map((p) => ({ ...p, ...traits(p) }));
+    const names = await brandNames(ctx);
+    const out = [];
+    for (const rule of GAP_RULES) {
+      const reason = rule.check(owned);
+      if (!reason) continue;
+      const picks = products
+        .filter(rule.fits)
+        .map((p) => ({ p, pairs: owned.filter((i) => p.pairsWith.includes(i.category)).length }))
+        .sort((a, b) => b.pairs - a.pairs || a.p.priceCents - b.p.priceCents)
+        .slice(0, 4);
+      if (!picks.length) continue;
+      const items = [];
+      for (const { p, pairs } of picks) {
+        items.push({
+          productId: p._id,
+          name: p.name,
+          brandName: names.get(p.brandSlug) ?? p.brandSlug,
+          category: p.category,
+          imageUrl: p.imageStorageId ? await ctx.storage.getUrl(p.imageStorageId) : null,
+          priceCents: p.priceCents,
+          summary: p.descriptor?.summary ?? "",
+          pairsWithCount: pairs,
+        });
+      }
+      out.push({ gapId: rule.gapId, title: rule.title, reason, products: items });
+      if (out.length === 4) break;
+    }
+    return out;
+  },
+});
+

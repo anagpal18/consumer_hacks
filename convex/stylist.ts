@@ -17,7 +17,19 @@ const DIRECT_PER_SLOT = 60;
 const SLOT_ORDER = ["outerwear", "top", "dress", "bottom", "shoes", "accessory"];
 const STYLED = new Set(["outerwear", "top", "dress", "bottom", "shoes", "accessory"]);
 
-type StyleItem = Pick<Doc<"items">, "_id" | "name" | "category" | "subtype" | "color" | "availability" | "wearCount" | "wearsSinceWash" | "isPrivate">;
+type StyleItem = Pick<Doc<"items">, "_id" | "name" | "category" | "subtype" | "color" | "availability" | "wearCount" | "wearsSinceWash" | "isPrivate"> & {
+  /** Short descriptor text for the model: formality, warmth and the photo summary. */
+  notes?: string;
+};
+
+/** Profiles are menswear for now: pieces cut for women and dresses are never suggested. */
+const menswear = (i: Pick<Doc<"items">, "cut" | "category">) => i.cut !== "womens" && i.category !== "dress";
+
+function notesFor(i: Doc<"items">) {
+  const d = i.descriptor;
+  if (!d) return undefined;
+  return `formality ${d.formality}/5, warmth ${d.warmth}/5; ${d.summary}`.slice(0, 220);
+}
 type Combo = { itemIds: Id<"items">[]; key: string; score: number };
 type Weather = { tempC: number; condition: string };
 type Swap = { from: Id<"items">; to: Id<"items"> | null };
@@ -30,7 +42,8 @@ export const context = internalQuery({
       .query("items")
       .withIndex("by_ownerId", (q) => q.eq("ownerId", profile._id))
       .take(500);
-    return items.map((i) => ({
+    return items.filter(menswear).map((i) => ({
+      notes: notesFor(i),
       _id: i._id,
       name: i.name,
       category: i.category,
@@ -157,7 +170,7 @@ async function rankWithModel(
   if (!apiKey) return null;
   const describe = (id: Id<"items">) => {
     const i = items.get(id)!;
-    return `${id} (${i.category}: ${i.name}, worn ${i.wearCount}x, ${i.wearsSinceWash} since wash)`;
+    return `${id} (${i.category}: ${i.name}, worn ${i.wearCount}x, ${i.wearsSinceWash} since wash${i.notes ? `; ${i.notes}` : ""})`;
   };
   const lines = combos.map((c, n) => `Look ${n}: ${c.itemIds.map(describe).join(" + ")}`).join("\n");
   const controller = new AbortController();
@@ -244,7 +257,7 @@ async function composeWithModel(
     const list = diverse(pool.filter((i) => i.category === cat).sort(fresh), DIRECT_PER_SLOT);
     if (!list.length) continue;
     for (const i of list) offered.set(i._id, i);
-    sections.push(`${cat.toUpperCase()}:\n${list.map((i) => `${i._id} | ${i.name}${i.wearsSinceWash ? ` (worn ${i.wearsSinceWash}x since wash)` : ""}`).join("\n")}`);
+    sections.push(`${cat.toUpperCase()}:\n${list.map((i) => `${i._id} | ${i.name}${i.wearsSinceWash ? ` (worn ${i.wearsSinceWash}x since wash)` : ""}${i.notes ? ` — ${i.notes}` : ""}`).join("\n")}`);
   }
   const lockedLine = locked.length ? `\nAlready chosen and must stay in every look: ${locked.map((l) => `${l._id} | ${l.category}: ${l.name}`).join("; ")}` : "";
   const controller = new AbortController();
