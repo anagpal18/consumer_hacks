@@ -16,7 +16,7 @@ import type {
   ScanStartResult,
 } from '@shared/contract';
 
-import type { SuggestArgs, SuggestResult, WearArgs, WearResult } from './types';
+import type { SuggestArgs, SuggestResult, WearArgs, WearResult } from './liveTypes';
 
 /** The backend scopes every call to a closet code (see CLOSET_CODE in mode.ts). */
 type InCloset<Args> = Args & { closetCode: string };

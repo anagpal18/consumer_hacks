@@ -195,13 +195,40 @@ function prepare(obj: THREE.Object3D) {
   return obj;
 }
 
+/**
+ * Rigged avatars (Avaturn exports) arrive in a T-pose. Lower the arms to a relaxed stance and
+ * match the height of the baked demo body so the camera framing stays the same.
+ */
+const REFERENCE_HEIGHT = 1.88;
+function relaxArms(root: THREE.Object3D) {
+  const left = root.getObjectByName('LeftArm');
+  const right = root.getObjectByName('RightArm');
+  if (!left || !right) return root;
+  root.updateMatrixWorld(true);
+  const lower = (bone: THREE.Object3D, angle: number) => {
+    if (!bone.parent) return;
+    const pq = bone.parent.getWorldQuaternion(new THREE.Quaternion());
+    const world = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+    bone.quaternion.premultiply(pq.clone().invert().multiply(world).multiply(pq));
+  };
+  lower(left, -1.2);
+  lower(right, 1.2);
+  root.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) o.frustumCulled = false;
+  });
+  root.updateMatrixWorld(true);
+  const height = new THREE.Box3().setFromObject(root).max.y;
+  if (height > 0.5) root.scale.multiplyScalar(REFERENCE_HEIGHT / height);
+  return root;
+}
+
 function load(id: string, src?: AssetSource) {
   let p = cache.get(id);
   if (!p) {
     if (!src) return Promise.reject(new Error('Asset missing: ' + id));
     p = toBuffer(src)
       .then((buf) => loader.parseAsync(buf, ''))
-      .then((gltf) => prepare(gltf.scene));
+      .then((gltf) => relaxArms(prepare(gltf.scene)));
     p.catch(() => cache.delete(id));
     cache.set(id, p);
   }

@@ -10,8 +10,8 @@ import {
   type ScanJob,
 } from '@shared/contract';
 
-import type { DataApi } from './api';
-import type { Outfit, OutfitSwap } from './types';
+import type { DataApi } from './liveApi';
+import type { Outfit, OutfitSwap } from './liveTypes';
 
 /**
  * In-memory backend for FIXTURE mode, seeded from the SAMPLE_* payloads.

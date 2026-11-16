@@ -62,6 +62,9 @@ export type MirrorAvatar = {
 
 export const DEFAULT_AVATAR_KEY = 'demo/avatar-a';
 
+/** Avaturn export that arrives already dressed (body, hair, shoes and one outfit mesh). */
+export const DRESSED_AVATAR_KEY = 'demo/avatar-b';
+
 export const AVATARS: Record<string, MirrorAvatar> = {
   [DEFAULT_AVATAR_KEY]: {
     asset: require('../../assets/mirror/avatar-a.glb'),
@@ -91,4 +94,19 @@ export const AVATARS: Record<string, MirrorAvatar> = {
       'demo/boots-brown': require('../../assets/mirror/kenil/boots-brown.glb'),
     },
   },
+  [DRESSED_AVATAR_KEY]: {
+    asset: require('../../assets/mirror/avatar-b.glb'),
+    label: 'Demo avatar',
+    morphs: false,
+    garments: {},
+  },
 };
+
+/**
+ * Avatars whose clothes are part of the model. The garment GLBs were baked on avatar-a's
+ * body and pose, so they are not drawn over these; the outfit's pieces show as photos instead.
+ */
+export const DRESSED_AVATARS = new Set<string>([DRESSED_AVATAR_KEY]);
+
+/** EXPO_PUBLIC_MIRROR_AVATAR=b opts in to the Avaturn avatar; the default keeps the swappable-garment body. */
+export const PREFERRED_AVATAR_KEY = process.env.EXPO_PUBLIC_MIRROR_AVATAR === 'b' ? DRESSED_AVATAR_KEY : DEFAULT_AVATAR_KEY;

@@ -17,6 +17,16 @@ npx expo export --platform web   # bundle check
 
 Add packages with `npx expo install <package>` so versions match the Expo SDK.
 
+## Closet code
+
+The closet code is the only credential for a closet, so it never goes in source. When the app is wired to Convex, put it in `.env.local` (git-ignored):
+
+```bash
+EXPO_PUBLIC_CLOSET_CODE=<long random code from docs/backend-handoff.md>
+```
+
+The sample-data build needs no code; its mock adapter uses a fake value.
+
 ## Layout
 
 | Path | Owner | What |
@@ -25,6 +35,7 @@ Add packages with `npx expo install <package>` so versions match the Expo SDK.
 | `src/components/`, `src/constants/theme.ts` | Aditya | UI components and design tokens |
 | `src/components/Mirror.tsx` | Kenil | Mirror slot. Takes the Mirror adapter props and renders a labeled placeholder until the real 3D viewer lands. |
 | `shared/contract.ts` | all | Types and sample payloads for every row of the shared interface table. Import as `@shared/contract`. |
+| `src/data/` | Aditya, then Kenil | One data-access seam (`api.ts`). Mock today; see docs/ui-handoff.md. |
 | `convex/` | Shresth | Convex backend. Not created yet; excluded from the app's tsconfig. |
 | `docs/` | all | Copies of the plan files |
 
