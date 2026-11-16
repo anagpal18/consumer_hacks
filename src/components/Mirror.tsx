@@ -13,7 +13,7 @@ import type { RenderSlot } from '@shared/renderAssets';
 const READY_TIMEOUT_MS = 45000;
 const FALLBACK_TINT = '#8A8580';
 
-type Worn = Omit<ViewerGarment, 'src'> & { approximate?: string };
+type Worn = Omit<ViewerGarment, 'src'>;
 
 /** One entry per slot; a later garment for the same slot replaces an earlier one. */
 function resolveOutfit(garmentAssetKeys: string[], garments: MirrorGarment[] | undefined) {
@@ -24,7 +24,7 @@ function resolveOutfit(garmentAssetKeys: string[], garments: MirrorGarment[] | u
   for (const g of entries) {
     const known = g.renderAssetKey ? MIRROR_ASSETS[g.renderAssetKey] : undefined;
     if (known) {
-      bySlot.set(known.slot, { id: known.key, slot: known.slot, asset: known.key, bit: known.bit, approximate: known.approximate });
+      bySlot.set(known.slot, { id: known.key, slot: known.slot, asset: known.key, bit: known.bit });
       continue;
     }
     const template = TINT_TEMPLATES[g.slot as RenderSlot];
@@ -39,7 +39,6 @@ function resolveOutfit(garmentAssetKeys: string[], garments: MirrorGarment[] | u
       asset: template,
       bit: MIRROR_ASSETS[template].bit,
       tint,
-      approximate: g.label + ' (approximate color and shape)',
     });
   }
   return { worn: [...bySlot.values()], skipped };
@@ -54,7 +53,6 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
 
   const avatarKey = avatar.demo || !AVATAR_ASSETS[avatar.key] ? (AVATAR_ASSETS[PREFERRED_AVATAR_KEY] ? PREFERRED_AVATAR_KEY : DEFAULT_AVATAR_KEY) : avatar.key;
   const dressed = DRESSED_AVATARS.has(avatarKey);
-  const showDemoLabel = (avatar.demo || avatarKey !== avatar.key) && !dressed;
   const keysSignature = garmentAssetKeys.join('|');
   const garmentsSignature = JSON.stringify(garments ?? null);
   const outfit = useMemo(
@@ -137,10 +135,7 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
     return () => clearTimeout(timer);
   }, [state.status, attempt, report]);
 
-  const notes = dressed ? [] : [
-    ...outfit.worn.flatMap((w) => (w.approximate ? ['Approximate: ' + w.approximate] : [])),
-    ...outfit.skipped.map((label) => 'Not shown: ' + label),
-  ];
+  const notes = dressed ? [] : outfit.skipped.map((label) => 'Not shown: ' + label);
 
   return (
     <View style={styles.viewport}>
@@ -151,11 +146,6 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
         onMessage={onMessage}
         onFailure={(message) => report({ status: 'error', message })}
       />
-      {showDemoLabel && (
-        <View style={[styles.pill, styles.topLeft]} pointerEvents="none">
-          <Text style={styles.pillText}>Demo avatar</Text>
-        </View>
-      )}
       {notes.length > 0 && (
         <View style={styles.notes} pointerEvents="none">
           {notes.map((n) => (
@@ -189,9 +179,6 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
 const styles = StyleSheet.create({
   viewport: { flex: 1, backgroundColor: Colors.mirror, borderRadius: Radius.lg, overflow: 'hidden' },
   center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: Spacing.two },
-  topLeft: { position: 'absolute', top: Spacing.three, left: Spacing.three },
-  pill: { backgroundColor: Colors.mockSoft, borderRadius: Radius.pill, paddingHorizontal: Spacing.three, paddingVertical: Spacing.one },
-  pillText: { color: Colors.mock, fontSize: 12, fontWeight: '600' },
   notes: { position: 'absolute', left: Spacing.three, right: Spacing.three, bottom: Spacing.three, gap: Spacing.one },
   note: {
     alignSelf: 'flex-start',

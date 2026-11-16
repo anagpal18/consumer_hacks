@@ -14,22 +14,20 @@ export type MirrorAsset = RenderAssetMeta & {
   /** Bit of this garment in the _HIDE vertex masks baked into the GLBs. */
   bit: number;
   label: string;
-  /** Set when the mesh only approximates the item; shown in the viewer. */
-  approximate?: string;
 };
 
-const FILES: Record<string, { asset: number; bit: number; label: string; approximate?: string }> = {
+const FILES: Record<string, { asset: number; bit: number; label: string }> = {
   'demo/jacket-denim': { asset: require('../../assets/mirror/jacket-denim.glb'), bit: 1, label: 'Denim jacket' },
   'demo/shirt-white': { asset: require('../../assets/mirror/shirt-white.glb'), bit: 2, label: 'White oxford shirt' },
   'demo/tee-black': { asset: require('../../assets/mirror/tee-black.glb'), bit: 4, label: 'Black t-shirt' },
   'demo/trousers-charcoal': { asset: require('../../assets/mirror/trousers-charcoal.glb'), bit: 8, label: 'Charcoal trousers' },
   'demo/sneakers-white': { asset: require('../../assets/mirror/sneakers-white.glb'), bit: 16, label: 'White sneakers' },
-  'demo/boots-brown': {
-    asset: require('../../assets/mirror/boots-brown.glb'),
-    bit: 32,
-    label: 'Brown leather boots',
-    approximate: 'Brown leather boots shown as low leather shoes',
-  },
+  'demo/boots-brown': { asset: require('../../assets/mirror/boots-brown.glb'), bit: 32, label: 'Brown leather boots' },
+  'demo/hoodie-grey-zip': { asset: require('../../assets/mirror/hoodie-grey-zip.glb'), bit: 1, label: 'Grey zip hoodie' },
+  'demo/blazer-navy': { asset: require('../../assets/mirror/blazer-navy.glb'), bit: 1, label: 'Navy blazer' },
+  'demo/shirt-lightblue': { asset: require('../../assets/mirror/shirt-lightblue.glb'), bit: 2, label: 'Light blue dress shirt' },
+  'demo/flannel-navy-plaid': { asset: require('../../assets/mirror/flannel-navy-plaid.glb'), bit: 2, label: 'Navy plaid flannel' },
+  'demo/jeans-darkwash': { asset: require('../../assets/mirror/jeans-darkwash.glb'), bit: 8, label: 'Dark-wash jeans' },
 };
 
 export const MIRROR_ASSETS: Record<string, MirrorAsset> = Object.fromEntries(

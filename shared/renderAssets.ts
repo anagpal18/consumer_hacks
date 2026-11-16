@@ -28,6 +28,8 @@ export type RenderAssetMeta = {
   /** Subtypes this mesh can stand for, matched against ClosetItem.subtype. */
   subtypes: string[];
   colorFamily: ColorFamily;
+  /** Surface pattern, so a plaid or denim item is not matched to a plain mesh of the same color. Unset means solid. */
+  pattern?: 'solid' | 'plaid' | 'check' | 'denim';
 };
 
 export const RENDER_ASSETS: readonly RenderAssetMeta[] = [
@@ -37,4 +39,9 @@ export const RENDER_ASSETS: readonly RenderAssetMeta[] = [
   { key: 'demo/trousers-charcoal', slot: 'bottom', category: 'bottom', subtypes: ['trousers', 'suit trousers', 'dress pants', 'slacks'], colorFamily: 'grey' },
   { key: 'demo/sneakers-white', slot: 'shoes', category: 'shoes', subtypes: ['sneakers', 'trainers', 'running shoes'], colorFamily: 'white' },
   { key: 'demo/boots-brown', slot: 'shoes', category: 'shoes', subtypes: ['boots', 'leather boots', 'chelsea boots', 'derby shoes', 'leather shoes'], colorFamily: 'brown' },
+  { key: 'demo/hoodie-grey-zip', slot: 'outerwear', category: 'outerwear', subtypes: ['zip hoodie', 'zip-up hoodie', 'full-zip hoodie', 'hoodie', 'sweatshirt', 'zip sweatshirt'], colorFamily: 'grey', pattern: 'solid' },
+  { key: 'demo/blazer-navy', slot: 'outerwear', category: 'outerwear', subtypes: ['blazer', 'suit jacket', 'sport coat', 'sports jacket'], colorFamily: 'blue', pattern: 'solid' },
+  { key: 'demo/shirt-lightblue', slot: 'top', category: 'top', subtypes: ['dress shirt', 'oxford shirt', 'button-down shirt', 'button-up shirt', 'long-sleeve shirt', 'shirt'], colorFamily: 'blue', pattern: 'solid' },
+  { key: 'demo/flannel-navy-plaid', slot: 'top', category: 'top', subtypes: ['flannel shirt', 'flannel', 'plaid shirt', 'checked shirt', 'button-up shirt', 'shirt'], colorFamily: 'blue', pattern: 'plaid' },
+  { key: 'demo/jeans-darkwash', slot: 'bottom', category: 'bottom', subtypes: ['jeans', 'denim jeans', 'denim pants', 'straight jeans', 'slim jeans'], colorFamily: 'blue', pattern: 'denim' },
 ];
