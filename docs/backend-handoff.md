@@ -74,6 +74,8 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 | `outfits:streak` (query) | `tzOffsetMinutes?` | `{ streakDays }` |
 | `outfits:challenge` / `outfits:recentWears` (queries) | | challenge progress / last 20 wears |
 | `privacy:deleteScan` | `scanId` | `{ deleted: true, scanId, deletedCandidates, deletedFiles, keptItemPhotos }`: deletes the scan's frames, clip, unused crops and candidates, and keeps the photos of items already confirmed |
+| `avatar:estimateBody` (action) | `photoStorageId, heightCm?, sex?` | body estimate, see below |
+| `privacy:deleteBodyPhoto` | | `{ deleted: true, deletedFiles }` |
 | `demo:seed` | | the 8 demo items (idempotent) |
 | `demo:reset` | code must start with `demo` | deletes items, wears, outfits, scans, candidates and uploaded files |
 
@@ -84,6 +86,37 @@ User-facing errors are `ConvexError` with `data = { code, message }`. Show `mess
 **Wear:** `requestId` must be stable per tap (for example a UUID created when the button renders). Sending it twice returns `duplicate: true` and increments nothing. Worn items stay `available`; `wearsSinceWash` grows and `washReminder` turns true at the threshold for that category. `tzOffsetMinutes` is **minutes east of UTC**, so Pacific standard time is `-480`. That is the opposite sign of JavaScript's `getTimezoneOffset()`, so send `-new Date().getTimezoneOffset()`. `streakDays` counts consecutive local days with a confirmed wear. Socks and underwear don't make an outfit distinct for the challenge.
 
 **Color and render assets:** `colorHex` is measured from the real crop's pixels (the dominant garment color, ignoring the background along the edges), never guessed by the model. At confirm time, `renderAssetKey` is set only when category, subtype and color family all match an entry in `convex/renderAssets.ts`, which holds the six `demo/*` keys; that table will be replaced by `shared/renderAssets.ts` from Kenil's side when it lands. Otherwise the key stays unset and the renderer should tint a base mesh with `colorHex` and show the crop.
+
+## Avatar body estimate (onboarding photo)
+
+```ts
+// action
+api.avatar.estimateBody({
+  closetCode: string,
+  photoStorageId: Id<"_storage">,        // upload with scans:generateUploadUrl, JPEG/PNG/WebP ≤ 10 MB
+  heightCm?: number,                     // user-entered; returned as-is (clamped 50-250), never overridden
+  sex?: "female" | "male" | "unspecified" // user-entered; never overridden
+}) => Promise<{
+  body: {
+    sex: "female" | "male" | "unspecified",
+    preset: "slim" | "average" | "broad",
+    skinTone: string | null,             // "#rrggbb" median of real face pixels, null if no face found
+    heightCm?: number,
+    proportions: { head: number; chest: number; arms: number; waist: number; hips: number; shoulders: number }, // each -1..1
+  },
+  confidence: number,                    // 0..1
+  notes: string,                         // short, user-readable
+}>
+
+// mutation
+api.privacy.deleteBodyPhoto({ closetCode }) => Promise<{ deleted: true; deletedFiles: number }>
+
+// query: profiles:get now also returns { hasBodyPhoto: boolean, bodyEstimate: <the result above> | null }
+```
+
+- The photo is claimed as a private `body` media file owned by the closet. Another closet that passes the same storage id gets `FORBIDDEN`. The latest estimate is stored on the profile.
+- The action never throws for a model failure or an unusable photo (not full-body, unreadable). It returns `preset: "average"`, all proportions 0, `confidence` 0.1 and the reason in `notes`. It only throws for auth or input errors (`BAD_CLOSET_CODE`, `BAD_MEDIA`, `FORBIDDEN`).
+- Sex values and preset keys live in `AVATAR_SEXES` / `AVATAR_PRESETS` in `convex/avatar.ts`, so they can be swapped when HEHE-13's contract lands. The model is the detection model (`DETECT_MODEL`). A call takes about 3-4 s.
 
 ## Demo closet
 

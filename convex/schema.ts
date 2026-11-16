@@ -46,16 +46,37 @@ export const scanError = v.object({
   retryable: v.boolean(),
 });
 
+export const bodyEstimate = v.object({
+  body: v.object({
+    sex: v.string(),
+    preset: v.string(),
+    skinTone: v.union(v.string(), v.null()),
+    heightCm: v.optional(v.number()),
+    proportions: v.object({
+      head: v.number(),
+      chest: v.number(),
+      arms: v.number(),
+      waist: v.number(),
+      hips: v.number(),
+      shoulders: v.number(),
+    }),
+  }),
+  confidence: v.number(),
+  notes: v.string(),
+});
+
 export default defineSchema({
   profiles: defineTable({
     closetCode: v.string(),
     displayName: v.optional(v.string()),
+    bodyPhotoStorageId: v.optional(v.id("_storage")),
+    bodyEstimate: v.optional(bodyEstimate),
   }).index("by_closetCode", ["closetCode"]),
 
   media: defineTable({
     ownerId: v.id("profiles"),
     storageId: v.id("_storage"),
-    kind: v.union(v.literal("frame"), v.literal("clip"), v.literal("crop"), v.literal("photo")),
+    kind: v.union(v.literal("frame"), v.literal("clip"), v.literal("crop"), v.literal("photo"), v.literal("body")),
     contentType: v.optional(v.string()),
     size: v.optional(v.number()),
   })
@@ -126,6 +147,50 @@ export default defineSchema({
     wearCount: v.number(),
     lastWornAt: v.number(),
   }).index("by_ownerId_and_key", ["ownerId", "key"]),
+
+  // Sample catalog for Feed and Shop. Every row is demo content, never a real partner or account.
+  brands: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    tagline: v.string(),
+    colorHex: v.string(),
+  }).index("by_slug", ["slug"]),
+
+  deals: defineTable({
+    brandSlug: v.string(),
+    title: v.string(),
+    description: v.string(),
+    code: v.string(),
+    discountPct: v.number(),
+    pointsCost: v.number(),
+    expiresAt: v.number(),
+  }).index("by_brandSlug", ["brandSlug"]),
+
+  products: defineTable({
+    brandSlug: v.string(),
+    name: v.string(),
+    category,
+    subtype: v.string(),
+    color: v.string(),
+    colorHex: v.string(),
+    priceCents: v.number(),
+    pairsWith: v.array(category),
+    imageStorageId: v.optional(v.id("_storage")),
+  }).index("by_brandSlug", ["brandSlug"]),
+
+  feedPosts: defineTable({
+    rank: v.number(),
+    kind: v.union(v.literal("friend"), v.literal("creator"), v.literal("brand")),
+    author: v.string(),
+    handle: v.string(),
+    brandSlug: v.optional(v.string()),
+    caption: v.string(),
+    prompt: v.string(),
+    swatches: v.array(v.string()),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
+    pieces: v.optional(v.array(v.string())),
+    likes: v.number(),
+  }).index("by_rank", ["rank"]),
 
   wearLogs: defineTable({
     ownerId: v.id("profiles"),

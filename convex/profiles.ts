@@ -18,6 +18,12 @@ export const get = query({
   handler: async (ctx, args) => {
     const profile = await findProfile(ctx, args.closetCode);
     if (!profile) return null;
-    return { profileId: profile._id, closetCode: profile.closetCode, displayName: profile.displayName ?? null };
+    return {
+      profileId: profile._id,
+      closetCode: profile.closetCode,
+      displayName: profile.displayName ?? null,
+      hasBodyPhoto: !!profile.bodyPhotoStorageId,
+      bodyEstimate: profile.bodyEstimate ?? null,
+    };
   },
 });

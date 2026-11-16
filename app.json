@@ -8,7 +8,8 @@
     "scheme": "wearagain",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.wearagain.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -32,10 +33,19 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      "expo-asset",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Wear Again reads the closet video you pick to find your clothes.",
+          "cameraPermission": "Wear Again records a short closet video to find your clothes.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
       "reactCompiler": true
     }
   }
