@@ -7,7 +7,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
 import { dominantHex } from "./color";
 import { colorFamily } from "./renderAssets";
-import type { Category } from "./lib";
+import type { Category, Pattern } from "./lib";
 import { extractFramesFromVideo } from "./video";
 
 const DEFAULT_MODEL = "gpt-6.1-terra";
@@ -22,6 +22,7 @@ function detectConfig() {
 const MODEL_TIMEOUT_MS = 240_000;
 const CROP_MAX_SIDE = 512;
 const CATEGORIES: Category[] = ["top", "bottom", "outerwear", "dress", "shoes", "socks", "underwear", "accessory"];
+const PATTERNS: Pattern[] = ["solid", "plaid", "check", "denim", "stripe", "print", "other"];
 
 const DETECTION_SCHEMA = {
   type: "object",
@@ -44,11 +45,17 @@ const DETECTION_SCHEMA = {
           "needsReview",
           "reviewReason",
           "similarTo",
+          "pattern",
         ],
         properties: {
           category: { type: "string", enum: CATEGORIES },
           subtype: { type: "string", description: "Plain garment type, e.g. 't-shirt', 'jeans', 'sneakers'. No brand or fabric guesses." },
           color: { type: "string", description: "Main color in one or two plain words." },
+          pattern: {
+            type: "string",
+            enum: PATTERNS,
+            description: "Surface look: solid, plaid (tartan or flannel), check (windowpane, houndstooth, glen check), denim (jean fabric), stripe, print, or other.",
+          },
           frameId: { type: "string", description: "Id of the frame with the clearest view of this piece." },
           box: {
             type: "object",
@@ -84,6 +91,7 @@ type Detected = {
   category: Category;
   subtype: string;
   color: string;
+  pattern: Pattern;
   frameId: string;
   box: { x: number; y: number; w: number; h: number };
   alsoSeenIn: string[];
@@ -252,6 +260,7 @@ export const run = internalAction({
           category: d.category,
           subtype: d.subtype.trim().toLowerCase() || d.category,
           color: d.color.trim().toLowerCase(),
+          pattern: PATTERNS.includes(d.pattern) ? d.pattern : undefined,
           colorHex: pixelHex,
           cropBox: d.box,
           cropStorageId,

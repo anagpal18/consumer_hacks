@@ -4,6 +4,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 export type Category = Doc<"items">["category"];
 export type Availability = Doc<"items">["availability"];
+export type Pattern = NonNullable<Doc<"items">["pattern"]>;
 
 export const MAX_FRAMES = 16;
 export const MAX_FRAME_BYTES = 10 * 1024 * 1024;

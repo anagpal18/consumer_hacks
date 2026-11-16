@@ -61,7 +61,7 @@ export default function ClosetScreen() {
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Nothing here yet</Text>
           <Text style={styles.muted}>Scan your clothes with a short video. You confirm every piece before it is added.</Text>
-          {api.dev ? <Button label="Load sample closet" variant="ghost" compact onPress={() => api.dev?.loadSampleCloset()} /> : null}
+          {api.dev ? <Button label="Load a starter closet" variant="ghost" compact onPress={() => api.dev?.loadSampleCloset()} /> : null}
         </View>
       ) : shown.length === 0 ? (
         <Text style={styles.muted}>No pieces match this filter.</Text>

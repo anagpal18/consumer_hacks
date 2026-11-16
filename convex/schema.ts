@@ -12,6 +12,16 @@ export const category = v.union(
   v.literal("accessory"),
 );
 
+export const pattern = v.union(
+  v.literal("solid"),
+  v.literal("plaid"),
+  v.literal("check"),
+  v.literal("denim"),
+  v.literal("stripe"),
+  v.literal("print"),
+  v.literal("other"),
+);
+
 export const cut = v.union(v.literal("mens"), v.literal("womens"), v.literal("unisex"));
 
 /** What a vision model wrote about a garment photo; the stylist and the gap finder read it. */
@@ -121,6 +131,7 @@ export default defineSchema({
     category,
     subtype: v.string(),
     color: v.string(),
+    pattern: v.optional(pattern),
     colorHex: v.optional(v.string()),
     cropBox,
     cropStorageId: v.optional(v.id("_storage")),
@@ -140,6 +151,7 @@ export default defineSchema({
     subtype: v.string(),
     color: v.string(),
     colorHex: v.optional(v.string()),
+    pattern: v.optional(pattern),
     photoStorageId: v.optional(v.id("_storage")),
     renderAssetKey: v.optional(v.string()),
     availability,

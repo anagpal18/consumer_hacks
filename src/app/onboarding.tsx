@@ -86,7 +86,7 @@ export default function OnboardingScreen() {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Set up your mirror</Text>
-        <Text style={styles.body}>A few approximate details so clothes sit about right. You can change them later.</Text>
+        <Text style={styles.body}>A few details so clothes fit right. You can change them later.</Text>
         <Button label="Skip, use a preset avatar" variant="secondary" icon="flash-outline" testID="onboarding-preset" onPress={() => finish(true)} />
 
         <View style={styles.section}>
