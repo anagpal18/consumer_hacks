@@ -4,7 +4,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Mirror } from '@/components/Mirror';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { AVATARS } from '@/mirror/assets';
 import { BodyControls } from '@/mirror/BodyControls';
 import {
   SAMPLE_AVATAR,
@@ -36,8 +35,7 @@ export default function MirrorLab() {
   const [controls, setControls] = useState<MirrorViewerControls | null>(null);
 
   const outfit = ['demo/jacket-denim', 'demo/shirt-white', 'demo/trousers-charcoal', SHOES[shoes]];
-  // My avatar only wears the garments refitted to it so far.
-  const keys = !mine ? outfit : look ? ['avaturn/look', SHOES[shoes]] : outfit.filter((k) => k in AVATARS.kenil.garments);
+  const keys = mine && look ? ['avaturn/look', SHOES[shoes]] : outfit;
   const garments: MirrorGarment[] | undefined = tint
     ? [
         { slot: 'top', renderAssetKey: 'demo/shirt-white', label: 'White oxford shirt' },
