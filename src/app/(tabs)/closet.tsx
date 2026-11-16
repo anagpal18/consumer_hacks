@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   filters: { gap: Spacing.two, paddingRight: Spacing.four },
   muted: { fontSize: 14, lineHeight: 20, color: Colors.muted },
   emptyCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.line, padding: Spacing.five, gap: Spacing.two },
-  emptyTitle: { fontFamily: Fonts.serif, fontSize: 22, color: Colors.ink },
+  emptyTitle: { fontFamily: Fonts.heading, fontSize: 22, color: Colors.ink },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
   card: {
     flexBasis: '47%',

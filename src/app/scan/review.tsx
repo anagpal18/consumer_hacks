@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three, padding: Spacing.six, backgroundColor: Colors.background },
   list: { padding: Spacing.four, gap: Spacing.three },
   summary: { gap: Spacing.one, marginBottom: Spacing.one },
-  title: { fontFamily: Fonts.serif, fontSize: 26, color: Colors.ink },
+  title: { fontFamily: Fonts.heading, fontSize: 26, color: Colors.ink },
   muted: { fontSize: 14, lineHeight: 20, color: Colors.muted },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.line, padding: Spacing.three, gap: Spacing.two },
   cardUncertain: { borderColor: Colors.worn, borderWidth: 1.5 },

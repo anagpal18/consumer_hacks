@@ -142,7 +142,7 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   root: { padding: Spacing.five, gap: Spacing.four },
   progressRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.six, gap: Spacing.four, backgroundColor: Colors.background },
-  title: { fontFamily: Fonts.serif, fontSize: 28, color: Colors.ink },
+  title: { fontFamily: Fonts.heading, fontSize: 28, color: Colors.ink },
   body: { fontSize: 16, lineHeight: 22, color: Colors.inkSoft, textAlign: 'left' },
   tips: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.four, gap: Spacing.three, borderWidth: 1, borderColor: Colors.line },
   tip: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },

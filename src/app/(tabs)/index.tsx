@@ -219,7 +219,7 @@ export default function HomeScreen() {
         />
 
         <View style={[styles.topBar, { top: insets.top + Spacing.two }]} pointerEvents="box-none">
-          <Text style={styles.brand}>Wear Again</Text>
+          <Text style={styles.brand}>Dripp</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Profile" hitSlop={10} onPress={() => router.push('/profile')} style={styles.roundButton}>
             <Ionicons name="person-outline" size={20} color={Colors.ink} />
           </Pressable>
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.mirror },
   mirrorArea: { flex: 1 },
   topBar: { position: 'absolute', left: Spacing.four, right: Spacing.four, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { fontFamily: Fonts.serif, fontSize: 24, color: Colors.ink },
+  brand: { fontFamily: Fonts.display, fontSize: 28, letterSpacing: -0.5, color: Colors.ink },
   roundButton: {
     width: 44,
     height: 44,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   savedHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  savedTitle: { fontFamily: Fonts.serif, fontSize: 22, color: Colors.ink },
+  savedTitle: { fontFamily: Fonts.heading, fontSize: 22, color: Colors.ink },
   savedText: { fontSize: 14, lineHeight: 20, color: Colors.inkSoft },
   savedActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.two, marginTop: Spacing.one },
   panel: {
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  title: { flex: 1, fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink },
+  title: { flex: 1, fontFamily: Fonts.heading, fontSize: 20, color: Colors.ink },
   lookSwitch: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 32 },
   lookSwitchText: { fontSize: 13, fontWeight: '600', color: Colors.accent },
   reason: { fontSize: 14, lineHeight: 20, minHeight: 40, color: Colors.inkSoft },

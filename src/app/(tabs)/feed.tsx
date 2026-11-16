@@ -197,7 +197,7 @@ function ReelPage({ post, width, height, topInset, isActive, likeState, isOwned,
   };
 
   const share = () => {
-    Share.share({ message: handle(post.brandName) + ' on Wear Again: ' + post.caption + '. ' + post.pieces.map((p) => p.name).join(', ') }).catch(() => undefined);
+    Share.share({ message: handle(post.brandName) + ' on Dripp: ' + post.caption + '. ' + post.pieces.map((p) => p.name).join(', ') }).catch(() => undefined);
   };
 
   const styleIt = () => {

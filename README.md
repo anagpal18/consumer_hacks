@@ -1,4 +1,4 @@
-# Wear Again V2
+# Dripp
 
 Record a video of your clothes, confirm what the app found, and get dressed using what you own. Hackathon build; the plan lives in [docs/build.md](docs/build.md).
 

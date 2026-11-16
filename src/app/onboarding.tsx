@@ -85,6 +85,7 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.wordmark}>Dripp</Text>
         <Text style={styles.title}>Set up your mirror</Text>
         <Text style={styles.body}>A few details so clothes fit right. You can change them later.</Text>
         <Button label="Skip, use a preset avatar" variant="secondary" icon="flash-outline" testID="onboarding-preset" onPress={() => finish(true)} />
@@ -159,7 +160,8 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.five, gap: Spacing.four },
-  title: { fontFamily: Fonts.serif, fontSize: 30, color: Colors.ink },
+  wordmark: { fontFamily: Fonts.display, fontSize: 40, letterSpacing: -1, color: Colors.accent },
+  title: { fontFamily: Fonts.heading, fontSize: 30, color: Colors.ink },
   body: { fontSize: 15, lineHeight: 22, color: Colors.inkSoft },
   section: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.line, padding: Spacing.four, gap: Spacing.three },
   heading: { fontSize: 16, fontWeight: '700', color: Colors.ink },

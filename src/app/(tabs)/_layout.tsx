@@ -23,7 +23,7 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: Colors.background },
         headerShadowVisible: false,
         headerTitleAlign: 'left',
-        headerTitleStyle: { fontFamily: Fonts.serif, fontSize: 22, color: Colors.ink },
+        headerTitleStyle: { fontFamily: Fonts.heading, fontSize: 22, color: Colors.ink },
         headerRight: () => (
           <Link href="/profile" asChild>
             <Pressable accessibilityRole="button" accessibilityLabel="Profile" hitSlop={12} style={{ marginRight: Spacing.four }}>
