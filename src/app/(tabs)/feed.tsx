@@ -2,12 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MockBadge, type IconName } from '@/components/ui';
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
+import { MockBadge } from '@/components/ui';
+import { Colors, Fonts, Spacing } from '@/constants/theme';
 import { addToCloset, toggleLike, useReels, type Piece, type Reel } from '@/data/catalog';
 import { IS_FIXTURE_MODE } from '@/data/mode';
 import { setSession } from '@/state/session';
@@ -61,12 +61,14 @@ const SAMPLE_REELS: Reel[] = [
 
 const money = (cents: number) => '$' + Math.round(cents / 100);
 const DOUBLE_TAP_MS = 280;
+const handle = (brand: string) => brand.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 type LikeState = { liked: boolean; likes: number };
 
+/** Instagram-style feed of brand looks: stories row, post header, swipeable photos, actions, caption. */
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
-  const [height, setHeight] = useState(0);
+  const list = useRef<FlatList<Reel>>(null);
   const [likes, setLikes] = useState<Record<string, LikeState>>({});
   const [owned, setOwned] = useState<Record<string, boolean>>({});
   const reels = useReels(10);
@@ -88,7 +90,7 @@ export default function FeedScreen() {
   };
 
   const add = (piece: Piece) => {
-    if (owned[piece.productId] || piece.inCloset) return;
+    if (owned[piece.productId] || piece.inCloset || !piece.productId) return;
     setOwned((map) => ({ ...map, [piece.productId]: true }));
     if (!serverActions) return;
     addToCloset(piece.productId).catch((error) => {
@@ -97,79 +99,91 @@ export default function FeedScreen() {
     });
   };
 
+  const brands = posts ? [...new Map(posts.map((p, index) => [p.brandName, index])).entries()] : [];
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
-        <Text style={styles.title}>Feed</Text>
-        <MockBadge label="Sample feed · illustrative product images" />
+        <Text style={styles.logo}>Wear Again</Text>
+        <Ionicons name="heart-outline" size={24} color={Colors.ink} />
       </View>
-      <View style={styles.pager} onLayout={(event) => setHeight(Math.floor(event.nativeEvent.layout.height))}>
-        {posts === null || height === 0 ? (
-          <ActivityIndicator style={styles.loading} color={Colors.muted} />
-        ) : (
-          <FlatList
-            data={posts}
-            keyExtractor={(post) => post.postId}
-            pagingEnabled
-            snapToInterval={height}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            disableIntervalMomentum
-            showsVerticalScrollIndicator={false}
-            getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
-            windowSize={3}
-            initialNumToRender={2}
-            onEndReachedThreshold={2}
-            onEndReached={reels?.loadMore}
-            testID="feed-pager"
-            renderItem={({ item }) => (
-              <ReelPage
-                post={item}
-                height={height}
-                likeState={likes[item.postId] ?? { liked: item.likedByMe, likes: item.likes }}
-                isOwned={(piece) => piece.inCloset || !!owned[piece.productId]}
-                canAdd={(piece) => piece.productId !== ''}
-                onLike={(onlyLike) => like(item, onlyLike)}
-                onAdd={add}
+      {posts === null ? (
+        <ActivityIndicator style={styles.loading} color={Colors.muted} />
+      ) : (
+        <FlatList
+          ref={list}
+          data={posts}
+          keyExtractor={(post) => post.postId}
+          showsVerticalScrollIndicator={false}
+          onEndReachedThreshold={1.5}
+          onEndReached={reels?.loadMore}
+          onScrollToIndexFailed={() => undefined}
+          testID="feed-list"
+          ListHeaderComponent={
+            <View>
+              <FlatList
+                horizontal
+                data={brands}
+                keyExtractor={([brand]) => brand}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stories}
+                renderItem={({ item: [brand, index] }) => (
+                  <Pressable accessibilityRole="button" accessibilityLabel={brand + ' story'} style={styles.story} onPress={() => list.current?.scrollToIndex({ index, animated: true })}>
+                    <View style={styles.storyRing}>
+                      <View style={styles.storyAvatar}>
+                        <Text style={styles.storyLetter}>{brand[0]}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.storyName} numberOfLines={1}>{handle(brand)}</Text>
+                  </Pressable>
+                )}
               />
-            )}
-          />
-        )}
-      </View>
+              <View style={styles.badge}>
+                <MockBadge label="Sample brand posts · illustrative product images" />
+              </View>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <Post
+              post={item}
+              likeState={likes[item.postId] ?? { liked: item.likedByMe, likes: item.likes }}
+              isOwned={(piece) => piece.inCloset || !!owned[piece.productId]}
+              onLike={(onlyLike) => like(item, onlyLike)}
+              onAdd={add}
+            />
+          )}
+        />
+      )}
     </View>
   );
 }
 
-type ReelPageProps = {
+type PostProps = {
   post: Reel;
-  height: number;
   likeState: LikeState;
   isOwned: (piece: Piece) => boolean;
-  canAdd: (piece: Piece) => boolean;
   onLike: (onlyLike: boolean) => void;
   onAdd: (piece: Piece) => void;
 };
 
-function ReelPage({ post, height, likeState, isOwned, canAdd, onLike, onAdd }: ReelPageProps) {
-  const [selected, setSelected] = useState(0);
+function Post({ post, likeState, isOwned, onLike, onAdd }: PostProps) {
+  const { width } = useWindowDimensions();
+  const [index, setIndex] = useState(0);
   const lastTap = useRef(0);
   const burst = useSharedValue(0);
   const pop = useSharedValue(1);
   const burstStyle = useAnimatedStyle(() => ({ opacity: burst.get(), transform: [{ scale: 0.5 + burst.get() * 0.7 }] }));
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
-  const piece = post.pieces[selected] ?? post.pieces[0];
+  const piece = post.pieces[index] ?? post.pieces[0];
   const owned = piece ? isOwned(piece) : false;
+  const photoHeight = Math.round(width * 1.15);
 
-  const animateLike = () => {
-    pop.set(withSequence(withTiming(1.3, { duration: 110 }), withSpring(1)));
-  };
-
-  const onHeroPress = () => {
+  const tap = () => {
     const now = Date.now();
     if (now - lastTap.current < DOUBLE_TAP_MS) {
       lastTap.current = 0;
       burst.set(withSequence(withTiming(1, { duration: 140 }), withDelay(420, withTiming(0, { duration: 220 }))));
-      animateLike();
+      pop.set(withSequence(withTiming(1.3, { duration: 110 }), withSpring(1)));
       onLike(true);
       return;
     }
@@ -177,127 +191,140 @@ function ReelPage({ post, height, likeState, isOwned, canAdd, onLike, onAdd }: R
   };
 
   return (
-    <View style={[styles.page, { height }]} testID="feed-post">
-      <Pressable style={styles.hero} onPress={onHeroPress} accessibilityLabel="Double tap to like" testID="feed-hero">
-        {piece?.imageUrl ? (
-          <Image source={{ uri: piece.imageUrl }} style={styles.heroImage} contentFit="contain" transition={150} />
-        ) : (
-          <View style={[styles.heroImage, styles.swatch, { backgroundColor: piece?.colorHex ?? Colors.mirror }]}>
-            <Text style={styles.swatchLabel}>SAMPLE ITEM</Text>
+    <View style={styles.post} testID="feed-post">
+      <View style={styles.postHeader}>
+        <View style={styles.headerRing}>
+          <View style={styles.headerAvatar}>
+            <Text style={styles.headerLetter}>{post.brandName[0]}</Text>
           </View>
-        )}
-        <Animated.View pointerEvents="none" style={[styles.burst, burstStyle]}>
-          <Ionicons name="heart" size={110} color="#FFFFFF" style={styles.burstIcon} />
-        </Animated.View>
-        <View style={styles.actions}>
-          <Animated.View style={popStyle}>
-            <Action
-              icon={likeState.liked ? 'heart' : 'heart-outline'}
-              color={likeState.liked ? Colors.accent : Colors.ink}
-              label={String(likeState.likes)}
-              accessibilityLabel={likeState.liked ? 'Unlike' : 'Like'}
-              onPress={() => {
-                animateLike();
-                onLike(false);
-              }}
-            />
-          </Animated.View>
-          {piece && canAdd(piece) ? (
-            <Action
-              icon={owned ? 'checkmark-circle' : 'add-circle-outline'}
-              color={owned ? Colors.success : Colors.ink}
-              label={owned ? 'In closet' : 'Add to closet'}
-              accessibilityLabel={owned ? piece.name + ' is in your closet' : 'Add ' + piece.name + ' to closet'}
-              onPress={() => onAdd(piece)}
-            />
-          ) : null}
-          <Action
-            icon="sparkles-outline"
-            color={Colors.ink}
-            label="Style it"
-            accessibilityLabel="Style it with my closet"
-            onPress={() => {
-              setSession({ pendingPrompt: post.prompt });
-              router.navigate('/');
-            }}
-          />
         </View>
-      </Pressable>
+        <View style={styles.grow}>
+          <View style={styles.nameRow}>
+            <Text style={styles.brand}>{handle(post.brandName)}</Text>
+            <Ionicons name="checkmark-circle" size={14} color="#3897F0" />
+          </View>
+          <Text style={styles.sponsored}>Sample · {post.caption}</Text>
+        </View>
+        <Ionicons name="ellipsis-horizontal" size={20} color={Colors.ink} />
+      </View>
 
-      <View style={styles.info}>
-        <Text style={styles.brand}>{post.brandName}</Text>
-        <Text style={styles.caption} numberOfLines={2}>{post.caption}</Text>
+      <View style={{ width, height: photoHeight }}>
+        <FlatList
+          horizontal
+          pagingEnabled
+          data={post.pieces}
+          keyExtractor={(p, i) => p.productId || String(i)}
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(event) => setIndex(Math.round(event.nativeEvent.contentOffset.x / width))}
+          renderItem={({ item: p }) => (
+            <Pressable onPress={tap} accessibilityLabel="Double tap to like" testID="feed-hero">
+              {p.imageUrl ? (
+                <Image source={{ uri: p.imageUrl }} style={{ width, height: photoHeight }} contentFit="cover" transition={150} />
+              ) : (
+                <View style={[{ width, height: photoHeight }, styles.swatch, { backgroundColor: p.colorHex ?? Colors.mirror }]}>
+                  <Text style={styles.swatchLabel}>SAMPLE ITEM</Text>
+                </View>
+              )}
+            </Pressable>
+          )}
+        />
+        <Animated.View pointerEvents="none" style={[styles.burst, burstStyle]}>
+          <Ionicons name="heart" size={110} color="#FFFFFF" />
+        </Animated.View>
         {post.pieces.length > 1 ? (
-          <View style={styles.thumbs}>
-            {post.pieces.map((p, index) => (
-              <Pressable
-                key={p.productId + index}
-                accessibilityRole="button"
-                accessibilityLabel={'Show ' + p.name}
-                accessibilityState={{ selected: index === selected }}
-                onPress={() => setSelected(index)}
-                style={[styles.thumb, index === selected && styles.thumbSelected]}>
-                {p.imageUrl ? (
-                  <Image source={{ uri: p.imageUrl }} style={styles.thumbImage} contentFit="cover" />
-                ) : (
-                  <View style={[styles.thumbImage, { backgroundColor: p.colorHex ?? Colors.mirror }]} />
-                )}
-              </Pressable>
-            ))}
+          <View style={styles.counter} pointerEvents="none">
+            <Text style={styles.counterText}>{index + 1}/{post.pieces.length}</Text>
           </View>
         ) : null}
         {piece ? (
-          <View style={styles.piece}>
-            <View style={styles.pieceRow}>
-              <Text style={styles.pieceName} numberOfLines={1}>{piece.name}</Text>
-              {piece.priceCents > 0 ? <Text style={styles.price}>{money(piece.priceCents)}</Text> : null}
-            </View>
-            {piece.summary ? <Text style={styles.summary} numberOfLines={3}>{piece.summary}</Text> : null}
+          <View style={styles.tag} pointerEvents="none">
+            <Ionicons name="bag-handle-outline" size={13} color="#FFFFFF" />
+            <Text style={styles.tagText} numberOfLines={1}>{piece.name}{piece.priceCents ? ' · ' + money(piece.priceCents) : ''}</Text>
           </View>
         ) : null}
+      </View>
+
+      <View style={styles.actions}>
+        <Animated.View style={popStyle}>
+          <Pressable accessibilityRole="button" accessibilityLabel={likeState.liked ? 'Unlike' : 'Like'} hitSlop={8} onPress={() => onLike(false)}>
+            <Ionicons name={likeState.liked ? 'heart' : 'heart-outline'} size={27} color={likeState.liked ? '#ED4956' : Colors.ink} />
+          </Pressable>
+        </Animated.View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Style it with my closet"
+          hitSlop={8}
+          onPress={() => {
+            setSession({ pendingPrompt: post.prompt });
+            router.navigate('/');
+          }}>
+          <Ionicons name="sparkles-outline" size={25} color={Colors.ink} />
+        </Pressable>
+        <Ionicons name="paper-plane-outline" size={25} color={Colors.ink} />
+        <View style={styles.dots}>
+          {post.pieces.length > 1
+            ? post.pieces.map((_, i) => <View key={i} style={[styles.dot, i === index && styles.dotOn]} />)
+            : null}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={owned ? 'In closet' : 'Add to closet'}
+          hitSlop={8}
+          disabled={!piece?.productId || owned}
+          onPress={() => piece && onAdd(piece)}
+          testID="feed-add">
+          <Ionicons name={owned ? 'bookmark' : 'bookmark-outline'} size={25} color={Colors.ink} />
+        </Pressable>
+      </View>
+
+      <View style={styles.meta}>
+        <Text style={styles.likes}>{likeState.likes.toLocaleString()} likes</Text>
+        <Text style={styles.caption}>
+          <Text style={styles.brand}>{handle(post.brandName)} </Text>
+          {post.caption}. {post.pieces.map((p) => p.name).join(' · ')}
+        </Text>
+        {piece?.summary ? <Text style={styles.summary} numberOfLines={2}>{piece.summary}</Text> : null}
+        <Text style={styles.hint}>{owned ? piece?.name + ' is in your closet' : 'Tap the bookmark to add ' + (piece?.name ?? 'this piece') + ' to your closet'}</Text>
       </View>
     </View>
   );
 }
 
-function Action({ icon, color, label, accessibilityLabel, onPress }: { icon: IconName; color: string; label: string; accessibilityLabel: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} hitSlop={6} onPress={onPress} style={styles.action}>
-      <View style={styles.actionCircle}>
-        <Ionicons name={icon} size={26} color={color} />
-      </View>
-      <Text style={styles.actionLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1, backgroundColor: '#FFFFFF' },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.four, paddingVertical: Spacing.two },
-  title: { fontFamily: Fonts.serif, fontSize: 22, color: Colors.ink },
-  pager: { flex: 1 },
-  loading: { flex: 1 },
-  page: { backgroundColor: Colors.background },
-  hero: { flex: 1, backgroundColor: Colors.surface, marginHorizontal: Spacing.two, borderRadius: Radius.lg, overflow: 'hidden' },
-  heroImage: { width: '100%', height: '100%' },
+  logo: { fontFamily: Fonts.serif, fontSize: 26, color: Colors.ink },
+  loading: { marginTop: 48 },
+  stories: { paddingHorizontal: Spacing.three, gap: Spacing.three, paddingVertical: Spacing.two },
+  story: { alignItems: 'center', width: 72, gap: 4 },
+  storyRing: { width: 68, height: 68, borderRadius: 34, borderWidth: 2.5, borderColor: '#D62976', alignItems: 'center', justifyContent: 'center' },
+  storyAvatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: Colors.ink, alignItems: 'center', justifyContent: 'center' },
+  storyLetter: { color: '#FFFFFF', fontSize: 22, fontWeight: '700' },
+  storyName: { fontSize: 11, color: Colors.ink },
+  badge: { paddingHorizontal: Spacing.four, paddingBottom: Spacing.two, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.line },
+  post: { paddingBottom: Spacing.four },
+  postHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  headerRing: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#D62976', alignItems: 'center', justifyContent: 'center' },
+  headerAvatar: { width: 31, height: 31, borderRadius: 16, backgroundColor: Colors.ink, alignItems: 'center', justifyContent: 'center' },
+  headerLetter: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  grow: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  brand: { fontSize: 14, fontWeight: '700', color: Colors.ink },
+  sponsored: { fontSize: 12, color: Colors.muted },
   swatch: { alignItems: 'center', justifyContent: 'center' },
-  swatchLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1, color: '#FFFFFF', textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 4 },
-  burst: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  burstIcon: { textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 12 },
-  actions: { position: 'absolute', right: Spacing.three, bottom: Spacing.four, gap: Spacing.four, alignItems: 'center' },
-  action: { alignItems: 'center', gap: 2, width: 76 },
-  actionCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(251,248,243,0.92)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.line },
-  actionLabel: { fontSize: 11, fontWeight: '600', color: Colors.ink, textAlign: 'center', backgroundColor: 'rgba(251,248,243,0.85)', borderRadius: 6, paddingHorizontal: 4, overflow: 'hidden' },
-  info: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.three, gap: Spacing.two },
-  brand: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5, color: Colors.inkSoft, textTransform: 'uppercase' },
-  caption: { fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink },
-  thumbs: { flexDirection: 'row', gap: Spacing.two },
-  thumb: { width: 54, height: 54, borderRadius: Radius.sm, borderWidth: 2, borderColor: 'transparent', overflow: 'hidden' },
-  thumbSelected: { borderColor: Colors.accent },
-  thumbImage: { width: '100%', height: '100%', backgroundColor: Colors.surfaceSunken },
-  piece: { gap: 2 },
-  pieceRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
-  pieceName: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.ink },
-  price: { fontSize: 15, fontWeight: '600', color: Colors.inkSoft },
+  swatchLabel: { color: '#FFFFFF', fontWeight: '700', letterSpacing: 1 },
+  burst: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  counter: { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 },
+  counterText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  tag: { position: 'absolute', left: 12, bottom: 12, maxWidth: '80%', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 },
+  tagText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.four, paddingHorizontal: Spacing.three, paddingTop: Spacing.three },
+  dots: { flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 4, marginLeft: -60 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C7C7C7' },
+  dotOn: { backgroundColor: '#3897F0' },
+  meta: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two, gap: 4 },
+  likes: { fontSize: 14, fontWeight: '700', color: Colors.ink },
+  caption: { fontSize: 14, lineHeight: 19, color: Colors.ink },
   summary: { fontSize: 13, lineHeight: 18, color: Colors.muted },
+  hint: { fontSize: 12, color: Colors.muted },
 });

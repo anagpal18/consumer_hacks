@@ -10,8 +10,10 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const tabs: { name: string; title: string; icon: IconName }[] = [
   { name: 'index', title: 'Home', icon: 'body-outline' },
   { name: 'feed', title: 'Feed', icon: 'people-outline' },
+  { name: 'suggestions', title: 'For you', icon: 'sparkles-outline' },
+  { name: 'laundry', title: 'Laundry', icon: 'water-outline' },
   { name: 'closet', title: 'Closet', icon: 'shirt-outline' },
-  { name: 'shop', title: 'Shop', icon: 'bag-outline' },
+  { name: 'shop', title: 'Deals', icon: 'pricetag-outline' },
 ];
 
 export default function TabsLayout() {
