@@ -44,6 +44,9 @@ def bake(obj, name):
     new = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(new)
     return new
 
+def forearm_x(pts):
+    return pts[(pts[:, 0] > 0.22) & (np.abs(pts[:, 2] - 1.00) < 0.02)][:, 0].mean()
+
 def angles(pts):
     """Angle of the left arm below horizontal and the leg stance angle, from slice centroids."""
     def c(m): return pts[m].mean(0)
@@ -72,6 +75,7 @@ for n in list(mh):
         bpy.data.objects.remove(mh.pop(n), do_unlink=True)
 mbv = V(mbody)
 mh_arm, mh_leg = angles(mbv)
+mh_fx = forearm_x(mbv * ((1.84) / (mbv[:, 2].max())))
 print('MH angles', math.degrees(mh_arm), math.degrees(mh_leg), 'height', mbv[:, 2].max(), flush=True)
 
 # 2. Kenil: body from model-body, hair and Avaturn shoes from model-look, posed to the MH angles.
@@ -92,9 +96,10 @@ arms = [next(o for o in objs if o.type == 'ARMATURE') for objs in (kb, kl)]
 da, dl = math.radians(80), 0.0  # legs stay as modeled: his stance is close and posing them crosses the thighs
 for it in range(3):
     for a in arms: pose(a, da, dl)
-    tmp = bake(kbody, 'tmp'); ka, kleg = angles(V(tmp)); bpy.data.objects.remove(tmp, do_unlink=True)
-    print('K angles after pass', it, math.degrees(ka), math.degrees(kleg), flush=True)
-    da, dl = mh_arm - ka, 0.0
+    tmp = bake(kbody, 'tmp'); tv = V(tmp); ka, kleg = angles(tv); kx = forearm_x(tv); bpy.data.objects.remove(tmp, do_unlink=True)
+    print('K angles after pass', it, math.degrees(ka), 'forearm x', kx, 'MH', mh_fx, flush=True)
+    # Lower (or raise) the arm so the forearm lands where the demo body's forearm is.
+    da, dl = (kx - mh_fx) / 0.75, 0.0
 k = {'body': bake(kbody, 'kenil_body')}
 for o in kl:
     if o.name.startswith('avaturn_hair'): k['hair'] = bake(o, 'kenil_hair')
@@ -129,10 +134,26 @@ for i, p in enumerate(mbv):
     best = None
     for d in (N, -N):
         hit = ktree.ray_cast(P, d, 0.1)
-        if hit[0] is not None and (best is None or hit[3] < best[1]): best = (hit[0], hit[3])
-    loc = best[0] if best else ktree.find_nearest(P)[0]
+        # Only a surface facing the same way counts: an inner arm must not land on the torso.
+        if hit[0] is not None and hit[1].dot(N) > 0.5 and (best is None or hit[3] < best[1]): best = (hit[0], hit[3])
+    if best is None:
+        loc, n, _, _ = ktree.find_nearest(P)
+        best = (loc, 0) if n.dot(N) > 0.3 else None
+    if best is None:
+        disp[i] = np.nan; continue
+    loc = best[0]
     disp[i] = np.array(loc) - p
 edges = np.array([e.vertices[:] for e in mbody.data.edges])
+known = ~np.isnan(disp[:, 0])
+print('displacement found for', known.mean(), flush=True)
+disp[~known] = 0
+for _ in range(200):
+    if known.all(): break
+    acc = np.zeros_like(disp); cnt = np.zeros(len(disp))
+    np.add.at(acc, edges[:, 0], disp[edges[:, 1]] * known[edges[:, 1], None]); np.add.at(cnt, edges[:, 0], known[edges[:, 1]])
+    np.add.at(acc, edges[:, 1], disp[edges[:, 0]] * known[edges[:, 0], None]); np.add.at(cnt, edges[:, 1], known[edges[:, 0]])
+    fill = ~known & (cnt > 0)
+    disp[fill] = acc[fill] / cnt[fill, None]; known = known | fill
 deg = np.bincount(edges.ravel(), minlength=len(mbv)).astype(float)
 for _ in range(int(os.environ.get('SMOOTH', '25'))):
     acc = np.zeros_like(disp)
