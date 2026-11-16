@@ -1,10 +1,18 @@
+import { Asset } from 'expo-asset';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { DataProvider } from '@/data';
+import { BODY_TYPES } from '@/mirror/assets';
 
 export default function RootLayout() {
+  // Preload every onboarding mannequin so the mirror opens without a download wait.
+  useEffect(() => {
+    Asset.loadAsync(BODY_TYPES.map((b) => b.asset)).catch(() => undefined);
+  }, []);
+
   return (
     <DataProvider>
       <StatusBar style="dark" />
