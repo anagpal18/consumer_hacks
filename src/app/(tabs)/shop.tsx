@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, GarmentThumb, MockBadge, Pill } from '@/components/ui';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { useDeals, useProductPicks } from '@/data/catalog';
+import { addToCloset, useDeals, useGaps, useProductPicks, type Gap } from '@/data/catalog';
 import { useCloset } from '@/data/hooks';
+import { IS_FIXTURE_MODE } from '@/data/mode';
 import { setSession } from '@/state/session';
 
 /** SAMPLE recommendation, used in fixture mode. No partner catalog or checkout is connected. */
@@ -17,12 +19,38 @@ const SAMPLE_PRODUCT = {
   prompt: 'a cold evening out in a camel overcoat',
 };
 
+/** SAMPLE closet gap, used in fixture mode. */
+const SAMPLE_GAPS: Gap[] = [
+  {
+    gapId: 'sample_gap',
+    title: 'Smart shoes',
+    reason: 'You own 2 pairs of shoes and none above formality 3.',
+    products: [
+      { productId: 'sample_g1', name: 'Brown leather derbies', brandName: 'Sample partner', category: 'shoes', imageUrl: null, priceCents: 14900, summary: 'Plain-toe derbies that dress up trousers or dark denim.', pairsWithCount: 3, colorHex: '#6B4630' },
+      { productId: 'sample_g2', name: 'Black suede loafers', brandName: 'Sample partner', category: 'shoes', imageUrl: null, priceCents: 12900, summary: 'Unlined suede loafers for dinners and the office.', pairsWithCount: 2, colorHex: '#2A2624' },
+    ],
+  },
+];
+
 const money = (cents: number) => '$' + Math.round(cents / 100);
 
 export default function ShopScreen() {
   const closet = useCloset();
   const picks = useProductPicks(12);
   const deals = useDeals();
+  const liveGaps = useGaps();
+  const gaps = IS_FIXTURE_MODE ? SAMPLE_GAPS : liveGaps;
+  const [owned, setOwned] = useState<Record<string, boolean>>({});
+
+  const add = (productId: string) => {
+    if (owned[productId]) return;
+    setOwned((map) => ({ ...map, [productId]: true }));
+    if (IS_FIXTURE_MODE) return;
+    addToCloset(productId).catch((error) => {
+      console.warn('add to closet failed', error);
+      setOwned((map) => ({ ...map, [productId]: false }));
+    });
+  };
   const fallbackMatches = (closet ?? [])
     .filter((item) => item.availability !== 'retired' && SAMPLE_PRODUCT.pairsWith.includes(item.category))
     .slice(0, 4);
@@ -56,6 +84,44 @@ export default function ShopScreen() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <MockBadge label="Sample catalog, no checkout" />
+
+      {gaps && gaps.length > 0 ? (
+        <View style={styles.gaps} testID="shop-gaps">
+          <Text style={styles.gapsTitle}>Your closet is missing</Text>
+          {gaps.map((gap) => (
+            <View key={gap.gapId} style={styles.gap} testID="shop-gap">
+              <Text style={styles.gapTitle}>{gap.title}</Text>
+              <Text style={styles.body}>{gap.reason}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gapRow}>
+                {gap.products.map((product) => (
+                  <View key={product.productId} style={styles.gapCard} testID="shop-gap-product">
+                    {product.imageUrl ? (
+                      <Image source={{ uri: product.imageUrl }} style={styles.gapPhoto} contentFit="cover" transition={150} />
+                    ) : (
+                      <View style={[styles.gapPhoto, styles.hero, { backgroundColor: product.colorHex ?? Colors.mirror }]}>
+                        <Text style={styles.heroLabel}>SAMPLE ITEM</Text>
+                      </View>
+                    )}
+                    <Text style={styles.dealBrand}>{product.brandName}</Text>
+                    <Text style={styles.gapName} numberOfLines={2}>{product.name}</Text>
+                    <Text style={styles.price}>{money(product.priceCents)}</Text>
+                    <Text style={styles.dealMeta}>Goes with {product.pairsWithCount} of your pieces</Text>
+                    <Button
+                      label={owned[product.productId] ? 'In closet' : 'Add to closet'}
+                      icon={owned[product.productId] ? 'checkmark' : 'add'}
+                      variant={owned[product.productId] ? 'secondary' : 'primary'}
+                      compact
+                      disabled={owned[product.productId]}
+                      onPress={() => add(product.productId)}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ))}
+          <Text style={styles.note}>Sample listings with illustrative images. Adding copies the piece into your closet; nothing is bought.</Text>
+        </View>
+      ) : null}
 
       {deals && deals.length > 0 ? (
         <View>
@@ -124,6 +190,14 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.four, gap: Spacing.three },
+  gaps: { gap: Spacing.three },
+  gapsTitle: { fontFamily: Fonts.serif, fontSize: 24, color: Colors.ink },
+  gap: { gap: Spacing.one },
+  gapTitle: { fontSize: 16, fontWeight: '700', color: Colors.ink },
+  gapRow: { gap: Spacing.two, paddingTop: Spacing.two, paddingRight: Spacing.four },
+  gapCard: { width: 168, backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.line, padding: Spacing.two, gap: 4 },
+  gapPhoto: { width: '100%', height: 150, borderRadius: Radius.sm, backgroundColor: Colors.surfaceSunken },
+  gapName: { fontSize: 14, fontWeight: '600', color: Colors.ink, minHeight: 36 },
   section: { fontSize: 16, fontWeight: '700', color: Colors.ink, marginBottom: Spacing.two },
   deals: { gap: Spacing.two, paddingRight: Spacing.four },
   deal: { width: 200, backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.line, padding: Spacing.three, gap: 4 },
