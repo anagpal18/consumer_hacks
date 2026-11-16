@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, MIRROR_ASSETS, TINT_TEMPLATES } from '@/mirror/assets';
+import { AVATARS, DEFAULT_AVATAR_KEY, MIRROR_ASSETS, TINT_TEMPLATES } from '@/mirror/assets';
 import { loadAssetSource } from '@/mirror/loadAsset';
 import { MirrorSurface, type MirrorSurfaceHandle } from '@/mirror/MirrorSurface';
 import type { HostMessage, ViewerBody, ViewerGarment, ViewerMessage } from '@/mirror/protocol';
@@ -13,7 +13,10 @@ import { AVATAR_PRESETS, HEIGHT_RANGE_CM, PROPORTION_KEYS, UNSPECIFIED_SEX_RENDE
 const READY_TIMEOUT_MS = 45000;
 const FALLBACK_TINT = '#8A8580';
 
-type Worn = Omit<ViewerGarment, 'src'> & { approximate?: string };
+type Worn = Omit<ViewerGarment, 'src'> & { file: number; approximate?: string };
+
+/** Body sent for avatars without morph targets: their own shape, height and skin. */
+const AS_MODELED: ViewerBody = { meshPreset: 'male-average', female: false, skinTone: null, heightScale: 1, proportions: {} };
 
 /**
  * Proportions are -1..1 in the contract; the morphs were built at the clean limit,
@@ -33,28 +36,42 @@ function resolveBody(body: AvatarBody | undefined): ViewerBody {
   };
 }
 
-/** One entry per slot; a later garment for the same slot replaces an earlier one. */
-function resolveOutfit(garmentAssetKeys: string[], garments: MirrorGarment[] | undefined) {
+/**
+ * One entry per slot; a later garment for the same slot replaces an earlier one.
+ * Garment GLBs are looked up on the current avatar; a key without one there gets the
+ * slot's tint stand-in, and a slot without a stand-in on that avatar is listed as not shown.
+ */
+function resolveOutfit(avatarKey: string, garmentAssetKeys: string[], garments: MirrorGarment[] | undefined) {
+  const files = AVATARS[avatarKey].garments;
   const bySlot = new Map<string, Worn>();
   const skipped: string[] = [];
   const entries: MirrorGarment[] =
     garments ?? garmentAssetKeys.map((key) => ({ slot: MIRROR_ASSETS[key]?.slot ?? '', renderAssetKey: key, label: key }));
   for (const g of entries) {
     const known = g.renderAssetKey ? MIRROR_ASSETS[g.renderAssetKey] : undefined;
-    if (known) {
-      bySlot.set(known.slot, { id: known.key, slot: known.slot, asset: known.key, bit: known.bit, approximate: known.approximate });
+    if (known && files[known.key]) {
+      const asset = avatarKey + '|' + known.key;
+      bySlot.set(known.slot, {
+        id: asset,
+        slot: known.slot,
+        asset,
+        file: files[known.key],
+        bit: known.bit,
+        approximate: known.approximate,
+      });
       continue;
     }
     const template = TINT_TEMPLATES[g.slot as RenderSlot];
-    if (!template) {
+    if (!template || !files[template]) {
       skipped.push(g.label);
       continue;
     }
     const tint = g.colorHex ?? FALLBACK_TINT;
     bySlot.set(g.slot, {
-      id: 'tint:' + g.slot + ':' + tint,
+      id: 'tint:' + avatarKey + ':' + g.slot + ':' + tint,
       slot: g.slot,
-      asset: template,
+      asset: avatarKey + '|' + template,
+      file: files[template],
       bit: MIRROR_ASSETS[template].bit,
       tint,
       approximate: g.label + ' (approximate color and shape)',
@@ -70,15 +87,16 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<MirrorState>({ status: 'loading' });
 
-  const avatarKey = AVATAR_ASSETS[avatar.key] ? avatar.key : DEFAULT_AVATAR_KEY;
-  const showDemoLabel = avatar.demo || avatarKey !== avatar.key;
+  const avatarKey = AVATARS[avatar.key] ? avatar.key : DEFAULT_AVATAR_KEY;
+  const morphs = AVATARS[avatarKey].morphs;
+  const badge = avatar.demo || avatarKey !== avatar.key ? AVATARS[DEFAULT_AVATAR_KEY].label : morphs ? null : AVATARS[avatarKey].label;
   const keysSignature = garmentAssetKeys.join('|');
   const garmentsSignature = JSON.stringify(garments ?? null);
   const bodySignature = JSON.stringify(avatar.body ?? null);
-  const viewerBody = useMemo(() => resolveBody(JSON.parse(bodySignature) ?? undefined), [bodySignature]);
+  const viewerBody = useMemo(() => (morphs ? resolveBody(JSON.parse(bodySignature) ?? undefined) : AS_MODELED), [morphs, bodySignature]);
   const outfit = useMemo(
-    () => resolveOutfit(keysSignature ? keysSignature.split('|') : [], JSON.parse(garmentsSignature) ?? undefined),
-    [keysSignature, garmentsSignature],
+    () => resolveOutfit(avatarKey, keysSignature ? keysSignature.split('|') : [], JSON.parse(garmentsSignature) ?? undefined),
+    [avatarKey, keysSignature, garmentsSignature],
   );
 
   const report = useCallback(
@@ -93,10 +111,10 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
 
   const pushScene = useCallback(async () => {
     try {
-      const avatarSrc = sent.current.has(avatarKey) ? null : await loadAssetSource(AVATAR_ASSETS[avatarKey]);
+      const avatarSrc = sent.current.has(avatarKey) ? null : await loadAssetSource(AVATARS[avatarKey].asset);
       const list: ViewerGarment[] = [];
       for (const w of outfit.worn) {
-        const src = sent.current.has(w.asset) ? undefined : await loadAssetSource(MIRROR_ASSETS[w.asset].asset);
+        const src = sent.current.has(w.asset) ? undefined : await loadAssetSource(w.file);
         list.push({ id: w.id, slot: w.slot, asset: w.asset, bit: w.bit, tint: w.tint, src });
       }
       send({ type: 'scene', avatarId: avatarKey, avatarSrc, garments: list });
@@ -175,9 +193,9 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
         onMessage={onMessage}
         onFailure={(message) => report({ status: 'error', message })}
       />
-      {showDemoLabel && (
+      {badge && (
         <View style={[styles.pill, styles.topLeft]} pointerEvents="none">
-          <Text style={styles.pillText}>Demo avatar</Text>
+          <Text style={styles.pillText}>{badge}</Text>
         </View>
       )}
       {notes.length > 0 && (

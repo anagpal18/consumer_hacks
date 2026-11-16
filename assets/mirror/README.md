@@ -45,5 +45,23 @@ defensibly matches an entry; otherwise leave it unset and pass the item through
    then pack each GLB (`npx gltfpack -i in.glb -o out.glb -cc -kn -km -ke -vp 14`), copy them here, add the key to shared/renderAssets.ts and its file and
    bit (from out/meta.json) to src/mirror/assets.ts, and record the license in LICENSES.md.
 
+## Kenil's avatar (kenil/)
+
+`AvatarRef { kind: 'preset', key: 'kenil' }` renders his Avaturn model, labeled "My avatar".
+It has no morph targets, so `AvatarRef.body` does not apply. Each avatar has its own
+garment GLBs for the same renderAssetKeys (`AVATARS[key].garments` in src/mirror/assets.ts);
+a key with no GLB on that avatar falls back to the slot's tint stand-in, or is listed as not shown.
+pipeline/fit_kenil.py builds them from the Avaturn exports and the unpacked demo GLBs:
+
+```sh
+KENIL=/path/to/avaturn-exports MH_GLB=/path/to/unpacked-demo-glbs OUT=$PWD/out \
+  blender -b --python assets/mirror/pipeline/fit_kenil.py
+```
+
+It poses his arms down to the demo arm angle, fits shoes per foot by box, and moves the
+other garments with a smoothed displacement field from the demo body to his surface.
+It then pushes anything left inside his body out, and bakes the same hide masks.
+Pack each output with gltfpack as above.
+
 The viewer page itself lives in mirror-viewer/ and is bundled with
 `npm run build:mirror-viewer` into src/mirror/viewerHtml.generated.ts.
