@@ -72,11 +72,12 @@ const DETECTION_SCHEMA = {
   },
 } as const;
 
-const PROMPT = `You catalog garments from frames of one short closet video. The user shows pieces one at a time.
+const PROMPT = `You catalog garments from frames of one short closet video. The user may show pieces one at a time or pan across a closet.
 Return one entry per distinct physical garment. The same piece seen in several frames is ONE entry: pick its clearest frame and list the others in alsoSeenIn.
 If two entries look alike (same type and color) and you cannot tell whether they are the same piece or two pieces, keep both, set needsReview true on both, and point similarTo at each other.
 Set needsReview for partly hidden, blurry or low-confidence pieces. Do not invent items hidden behind others, brands or fabrics.
-Skip people's bodies, hangers, furniture and the person filming unless a garment is clearly being shown; a garment being worn by the person counts only if it is clearly presented.
+List every garment you can see well enough to name its type and color: pieces being shown, hanging on rails, folded on shelves or lying out. Go along each rail and shelf piece by piece, including pieces at the frame edge or partly overlapped by their neighbours. Skip pieces that are mostly hidden, lost in an indistinct folded stack or too blurry to name.
+Skip people's bodies, hangers and furniture; a garment someone is wearing counts only if it is clearly presented.
 Categories: top (shirts, t-shirts, sweaters, hoodies), bottom (pants, jeans, shorts, skirts), outerwear (jackets, coats, blazers), dress (dresses, jumpsuits), shoes, socks, underwear, accessory (hats, belts, bags, scarves).`;
 
 type Detected = {
