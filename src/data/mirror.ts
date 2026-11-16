@@ -1,12 +1,17 @@
-import {
-  PRIVATE_CATEGORIES,
-  type AvatarRef,
-  type ClosetItem,
-  type GarmentCategory,
-  type MirrorGarment,
-  type MirrorProps,
-} from '@shared/contract';
-import type { RenderSlot } from '@shared/renderAssets';
+import { PRIVATE_CATEGORIES, type AvatarRef, type ClosetItem, type GarmentCategory, type MirrorProps } from '@shared/contract';
+
+/**
+ * Local copies of MirrorGarment (shared/contract.ts) and RenderSlot (shared/renderAssets.ts)
+ * from PR #4 (kenil/mirror-3d). Import those instead once it merges.
+ */
+export type RenderSlot = 'outerwear' | 'top' | 'bottom' | 'shoes';
+
+export type MirrorGarment = {
+  slot: string;
+  renderAssetKey?: string;
+  colorHex?: string;
+  label: string;
+};
 
 const SLOT_BY_CATEGORY: Partial<Record<GarmentCategory, RenderSlot>> = {
   outerwear: 'outerwear',

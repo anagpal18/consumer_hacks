@@ -1,10 +1,10 @@
 export { CLOSET_CODE, DATA_MODE, FIXTURE_LABEL, IS_FIXTURE_MODE } from './mode';
 export { DataProvider } from './DataProvider';
-export { api, confirmScan, deleteScan, markWashed, setStatus, startScan } from './api';
-export { useCloset, useConfirmWear, useScan, useStylistSuggest, useTodaysLook } from './hooks';
+export { api, confirmScan, deleteScan, markWashed, setStatus, startScan } from './liveApi';
+export { useCloset, useConfirmWear, useScan, useStylistSuggest, useTodaysLook } from './liveHooks';
 export { extractFrames, frameTimestamps, pickClip, scanClip, uploadFrames } from './scanClip';
 export type { PickedClip, ScanClipProgress } from './scanClip';
 export { fixtureStore } from './fixtures';
 export { outfitToMirrorProps } from './mirror';
-export type { Outfit, OutfitSwap, SuggestArgs, SuggestResult, WearArgs, WearResult } from './types';
-export type { OutfitMirrorProps } from './mirror';
+export type { Outfit, OutfitSwap, SuggestArgs, SuggestResult, WearArgs, WearResult } from './liveTypes';
+export type { MirrorGarment, OutfitMirrorProps, RenderSlot } from './mirror';

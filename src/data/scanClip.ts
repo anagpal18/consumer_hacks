@@ -4,7 +4,7 @@ import { createVideoPlayer, type VideoPlayer } from 'expo-video';
 
 import type { ScanFrame, ScanStartResult, StorageUploadResponse } from '@shared/contract';
 
-import { generateUploadUrl, startScan } from './api';
+import { generateUploadUrl, startScan } from './liveApi';
 import { IS_FIXTURE_MODE } from './mode';
 
 export const DEFAULT_FRAME_COUNT = 10;
