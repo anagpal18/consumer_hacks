@@ -60,5 +60,5 @@ export const AVATAR_ASSETS: Record<string, number> = {
  */
 export const DRESSED_AVATARS = new Set<string>([DRESSED_AVATAR_KEY]);
 
-/** EXPO_PUBLIC_MIRROR_AVATAR=a keeps the swappable-garment body; anything else uses the Avaturn avatar. */
-export const PREFERRED_AVATAR_KEY = process.env.EXPO_PUBLIC_MIRROR_AVATAR === 'a' ? DEFAULT_AVATAR_KEY : DRESSED_AVATAR_KEY;
+/** EXPO_PUBLIC_MIRROR_AVATAR=b opts in to the Avaturn avatar; the default keeps the swappable-garment body. */
+export const PREFERRED_AVATAR_KEY = process.env.EXPO_PUBLIC_MIRROR_AVATAR === 'b' ? DRESSED_AVATAR_KEY : DEFAULT_AVATAR_KEY;
