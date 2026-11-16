@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   burst: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   burstIcon: { textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 12 },
   actions: { position: 'absolute', right: Spacing.three, bottom: Spacing.four, gap: Spacing.four, alignItems: 'center' },
-  action: { alignItems: 'center', gap: 2, maxWidth: 76 },
+  action: { alignItems: 'center', gap: 2, width: 76 },
   actionCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(251,248,243,0.92)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.line },
   actionLabel: { fontSize: 11, fontWeight: '600', color: Colors.ink, textAlign: 'center', backgroundColor: 'rgba(251,248,243,0.85)', borderRadius: 6, paddingHorizontal: 4, overflow: 'hidden' },
   info: { paddingHorizontal: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.three, gap: Spacing.two },

@@ -188,7 +188,7 @@ export function useReels(pageSize = 10) {
     if (!state || state.source !== 'reels' || state.next === null || busy.current) return;
     busy.current = true;
     fetchReels(pageSize, state.next)
-      .then((page) => page && setState((prev) => (prev ? { ...page, posts: [...prev.posts, ...page.posts] } : page)))
+      .then((page) => page && setState((prev) => (prev ? { ...page, posts: [...prev.posts, ...page.posts.filter((post) => !prev.posts.some((seen) => seen.postId === post.postId))] } : page)))
       .finally(() => {
         busy.current = false;
       });
