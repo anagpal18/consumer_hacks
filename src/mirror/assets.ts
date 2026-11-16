@@ -84,6 +84,10 @@ export const AVATARS: Record<string, MirrorAvatar> = {
     label: 'My avatar',
     morphs: false,
     garments: {
+      'demo/jacket-denim': require('../../assets/mirror/kenil/jacket-denim.glb'),
+      'demo/shirt-white': require('../../assets/mirror/kenil/shirt-white.glb'),
+      'demo/tee-black': require('../../assets/mirror/kenil/tee-black.glb'),
+      'demo/trousers-charcoal': require('../../assets/mirror/kenil/trousers-charcoal.glb'),
       'avaturn/look': require('../../assets/mirror/kenil/look.glb'),
       'avaturn/sneakers-blue': require('../../assets/mirror/kenil/sneakers-blue.glb'),
       'demo/sneakers-white': require('../../assets/mirror/kenil/sneakers-white.glb'),
