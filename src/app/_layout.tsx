@@ -1,11 +1,13 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Syne_700Bold } from '@expo-google-fonts/syne/700Bold';
 import { Syne_800ExtraBold } from '@expo-google-fonts/syne/800ExtraBold';
 import { Asset } from 'expo-asset';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Pressable } from 'react-native';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { DataProvider } from '@/data';
@@ -44,7 +46,18 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ title: 'Your avatar' }} />
         <Stack.Screen name="scan/index" options={{ title: 'Scan your closet' }} />
         <Stack.Screen name="scan/review" options={{ title: 'Review pieces' }} />
-        <Stack.Screen name="profile" options={{ title: 'Profile', presentation: 'modal' }} />
+        <Stack.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            presentation: 'modal',
+            headerRight: () => (
+              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={() => router.back()}>
+                <Ionicons name="close" size={24} color={Colors.ink} />
+              </Pressable>
+            ),
+          }}
+        />
       </Stack>
     </DataProvider>
   );

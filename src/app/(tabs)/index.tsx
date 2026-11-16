@@ -242,12 +242,6 @@ export default function HomeScreen() {
             <Text style={styles.viewerStatusText}>Preparing the mirror…</Text>
           </View>
         ) : null}
-        {mirrorState.status === 'error' ? (
-          <View style={styles.viewerStatus}>
-            <Text style={styles.viewerStatusText}>{mirrorState.message}</Text>
-            <Button label="Retry" compact variant="secondary" onPress={() => controls?.retry()} />
-          </View>
-        ) : null}
 
         {approximate.length > 0 ? (
           <View style={[styles.approximate, { top: insets.top + 170 }]}>
