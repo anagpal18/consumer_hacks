@@ -30,13 +30,14 @@ export default function MirrorLab() {
   const [shoes, setShoes] = useState<keyof typeof SHOES>('sneakers');
   const [tint, setTint] = useState(false);
   const [mine, setMine] = useState(false);
+  const [look, setLook] = useState(false);
   const [body, setBody] = useState<AvatarBody>(SAMPLE_AVATAR_BODY);
   const [state, setState] = useState<MirrorState>({ status: 'loading' });
   const [controls, setControls] = useState<MirrorViewerControls | null>(null);
 
   const outfit = ['demo/jacket-denim', 'demo/shirt-white', 'demo/trousers-charcoal', SHOES[shoes]];
   // My avatar only wears the garments refitted to it so far.
-  const keys = mine ? outfit.filter((k) => k in AVATARS.kenil.garments) : outfit;
+  const keys = !mine ? outfit : look ? ['avaturn/look', SHOES[shoes]] : outfit.filter((k) => k in AVATARS.kenil.garments);
   const garments: MirrorGarment[] | undefined = tint
     ? [
         { slot: 'top', renderAssetKey: 'demo/shirt-white', label: 'White oxford shirt' },
@@ -65,6 +66,7 @@ export default function MirrorLab() {
         <View style={styles.row}>
           <Chip label="Demo body" active={!mine} onPress={() => setMine(false)} />
           <Chip label="My avatar" active={mine} onPress={() => setMine(true)} />
+          {mine && <Chip label="Avaturn outfit" active={look} onPress={() => setLook((v) => !v)} />}
         </View>
         <View style={styles.row}>
           <Chip label="Canvas" active={shoes === 'canvas'} onPress={() => setShoes('canvas')} />

@@ -23,7 +23,9 @@ GARMENTS = [
     dict(key='demo/sneakers-white', file='sneakers-white', rank=1, bit=16, off=0.003),
     dict(key='demo/boots-brown', file='boots-brown', rank=1, bit=32, off=0.003),
 ]
-AVATURN_SHOES = dict(key='avaturn/sneakers-grey', file='shoes-avaturn', rank=1, bit=64)
+AVATURN_SHOES = dict(key='avaturn/sneakers-blue', file='shoes-avaturn', rank=1, bit=64)
+# Avaturn's top and trousers come fused in one mesh: worn as one fixed outfit.
+AVATURN_LOOK = dict(key='avaturn/look', file='look-avaturn', rank=3, bit=128)
 
 def V(obj):
     a = np.empty(len(obj.data.vertices) * 3); obj.data.vertices.foreach_get('co', a); return a.reshape(-1, 3)
@@ -202,8 +204,8 @@ for top, unders in (('trousers-charcoal', ['shirt-white', 'tee-black']),
 
 # 4. Hide masks, as in build_avatar.py: a vertex is covered by a garment when a short ray
 # along its normal (or against it) hits the garment.
-ALL = GARMENTS + [AVATURN_SHOES]
-objs = {g['file']: mh[g['file']] for g in GARMENTS}; objs['shoes-avaturn'] = k['shoes']
+ALL = GARMENTS + [AVATURN_SHOES, AVATURN_LOOK]
+objs = {g['file']: mh[g['file']] for g in GARMENTS}; objs['shoes-avaturn'] = k['shoes']; objs['look-avaturn'] = k['look']
 trees = {g['key']: bvh(objs[g['file']]) for g in ALL}
 def compute_mask(obj, rank):
     me = obj.data; me.calc_loop_triangles() if hasattr(me, 'calc_loop_triangles') else None
@@ -238,6 +240,7 @@ def export(objs_, path):
 for o in list(k.values()) + list(mh.values()): o.data.name = o.name
 export([k['body'], k['hair']], OUT + '/kenil-avatar.glb')
 export([k['shoes']], OUT + '/kenil-shoes-avaturn.glb')
+export([k['look']], OUT + '/kenil-look-avaturn.glb')
 for g in GARMENTS:
     mh[g['file']].name = g['file']
     export([mh[g['file']]], OUT + '/kenil-' + g['file'] + '.glb')

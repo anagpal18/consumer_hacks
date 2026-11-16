@@ -26,9 +26,20 @@ const GARMENTS: Record<string, { bit: number; label: string; approximate?: strin
   'avaturn/sneakers-blue': { bit: 64, label: 'Blue canvas sneakers' },
 };
 
-export const MIRROR_ASSETS: Record<string, MirrorAsset> = Object.fromEntries(
-  RENDER_ASSETS.map((meta) => [meta.key, { ...meta, ...GARMENTS[meta.key] }]),
-);
+export const MIRROR_ASSETS: Record<string, MirrorAsset> = {
+  ...Object.fromEntries(RENDER_ASSETS.map((meta) => [meta.key, { ...meta, ...GARMENTS[meta.key] }])),
+  // Avaturn ships its outfit as one fused mesh, so it is worn whole in the top slot and is not
+  // a closet match (not in shared/renderAssets.ts). Wear it without a bottom.
+  'avaturn/look': {
+    key: 'avaturn/look',
+    slot: 'top',
+    category: 'top',
+    subtypes: [],
+    colorFamily: 'brown',
+    bit: 128,
+    label: 'Avaturn outfit: leather jacket, white tee and black joggers (one piece)',
+  },
+};
 
 /** Mesh drawn with a flat item color when a slot's garment has no asset on this avatar. */
 export const TINT_TEMPLATES: Record<RenderSlot, string> = {
@@ -70,6 +81,7 @@ export const AVATARS: Record<string, MirrorAvatar> = {
     label: 'My avatar',
     morphs: false,
     garments: {
+      'avaturn/look': require('../../assets/mirror/kenil/look.glb'),
       'avaturn/sneakers-blue': require('../../assets/mirror/kenil/sneakers-blue.glb'),
       'demo/sneakers-white': require('../../assets/mirror/kenil/sneakers-white.glb'),
       'demo/boots-brown': require('../../assets/mirror/kenil/boots-brown.glb'),

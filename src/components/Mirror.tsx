@@ -50,10 +50,11 @@ function resolveOutfit(avatarKey: string, garmentAssetKeys: string[], garments: 
   for (const g of entries) {
     const known = g.renderAssetKey ? MIRROR_ASSETS[g.renderAssetKey] : undefined;
     if (known && files[known.key]) {
+      const asset = avatarKey + '|' + known.key;
       bySlot.set(known.slot, {
-        id: known.key,
+        id: asset,
         slot: known.slot,
-        asset: avatarKey + '|' + known.key,
+        asset,
         file: files[known.key],
         bit: known.bit,
         approximate: known.approximate,
@@ -67,7 +68,7 @@ function resolveOutfit(avatarKey: string, garmentAssetKeys: string[], garments: 
     }
     const tint = g.colorHex ?? FALLBACK_TINT;
     bySlot.set(g.slot, {
-      id: 'tint:' + g.slot + ':' + tint,
+      id: 'tint:' + avatarKey + ':' + g.slot + ':' + tint,
       slot: g.slot,
       asset: avatarKey + '|' + template,
       file: files[template],
