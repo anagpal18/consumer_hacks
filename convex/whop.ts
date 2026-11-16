@@ -62,7 +62,7 @@ export const checkout = action({
         body: JSON.stringify({
           variant: {
             title: `${p.brandName} ${p.name}`.slice(0, 80),
-            description: p.discountPct ? `${p.discountPct}% off with your Wear Again deal` : undefined,
+            description: p.discountPct ? `${p.discountPct}% off with your Dripp deal` : undefined,
             billing_type: "one_time",
             initial_price: price,
             currency: "usd",

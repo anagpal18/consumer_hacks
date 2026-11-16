@@ -1,5 +1,5 @@
 /**
- * Wear Again V2 shared contract.
+ * Dripp shared contract.
  *
  * One type per row of the "Shared interface" table in docs/build.md.
  * Function names match the Convex paths (scans:start -> api.scans.start).

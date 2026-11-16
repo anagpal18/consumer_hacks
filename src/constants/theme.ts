@@ -24,11 +24,11 @@ export const Colors = {
   mockSoft: '#E6E0F3',
 } as const;
 
-export const Fonts = Platform.select({
-  ios: { sans: 'system-ui', serif: 'ui-serif' },
-  web: { sans: 'system-ui, -apple-system, Segoe UI, sans-serif', serif: "Georgia, 'Times New Roman', serif" },
-  default: { sans: 'normal', serif: 'serif' },
-})!;
+export const Fonts = {
+  display: 'Syne_800ExtraBold',
+  heading: 'Syne_700Bold',
+  sans: Platform.select({ ios: 'system-ui', web: 'system-ui, -apple-system, Segoe UI, sans-serif', default: 'normal' })!,
+};
 
 export const Spacing = { half: 2, one: 4, two: 8, three: 12, four: 16, five: 24, six: 32 } as const;
 

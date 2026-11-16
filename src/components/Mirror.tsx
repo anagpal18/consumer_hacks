@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.four, gap: Spacing.two, maxWidth: 280, alignItems: 'center' },
-  title: { fontFamily: Fonts.serif, fontSize: 17, color: Colors.ink },
+  title: { fontFamily: Fonts.heading, fontSize: 17, color: Colors.ink },
   detail: { fontSize: 13, color: Colors.muted, textAlign: 'center' },
   button: { marginTop: Spacing.one, backgroundColor: Colors.accent, borderRadius: Radius.pill, paddingHorizontal: Spacing.five, paddingVertical: Spacing.two },
   buttonText: { color: Colors.onAccent, fontWeight: '600' },

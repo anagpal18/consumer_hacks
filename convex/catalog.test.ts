@@ -14,7 +14,7 @@ test("catalog seeds once and serves brands, deals, feed pages and closet-aware r
   expect(await t.query(api.catalog.brands, {})).toHaveLength(20);
   const deals = await t.query(api.catalog.deals, { brandSlug: "uniqlo" });
   expect(deals).toHaveLength(2);
-  expect(deals.every((d) => d.sample && d.code.startsWith("WEAR-UNIQLO-"))).toBe(true);
+  expect(deals.every((d) => d.sample && d.code.startsWith("DRIPP-UNIQLO-"))).toBe(true);
   expect(deals.some((d) => /sample/i.test(d.description + d.code))).toBe(false);
 
   const page1 = await t.query(api.catalog.feed, { limit: 50 });

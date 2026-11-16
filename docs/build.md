@@ -1,4 +1,4 @@
-# Wear Again V2 — Master build plan
+# Dripp — Master build plan
 
 ## Product
 

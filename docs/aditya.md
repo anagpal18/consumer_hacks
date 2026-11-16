@@ -1,6 +1,6 @@
 # Aditya — Mobile UI and frontend
 
-**Your main deliverable:** Make Wear Again feel like an intuitive dressing mirror. Own the app screens, navigation and component design. Kenil plugs in the live data and rendering adapter. Shresth owns Convex and garment detection from video.
+**Your main deliverable:** Make Dripp feel like an intuitive dressing mirror. Own the app screens, navigation and component design. Kenil plugs in the live data and rendering adapter. Shresth owns Convex and garment detection from video.
 
 ## Visual direction
 

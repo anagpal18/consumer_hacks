@@ -11,8 +11,8 @@ import { useWhopCheckout } from '@/lib/whop';
 
 /** Built-in deals for fixture mode (no backend). */
 const SAMPLE_DEALS: Deal[] = [
-  { dealId: 'sd1', brandSlug: 'sample', brandName: 'Northline Studio', title: '15% off your next order', description: 'Use it on anything from Northline Studio. Redeem with Wear Again points.', code: 'WEAR-NORTHLINE-15', discountPct: 15, pointsCost: 300, expiresAt: Date.now() + 14 * 86_400_000 },
-  { dealId: 'sd2', brandSlug: 'sample', brandName: 'Northline Studio', title: 'Free repair or alteration', description: 'Keep a piece going instead of replacing it.', code: 'WEAR-NORTHLINE-FIX', discountPct: 0, pointsCost: 500, expiresAt: Date.now() + 30 * 86_400_000 },
+  { dealId: 'sd1', brandSlug: 'sample', brandName: 'Northline Studio', title: '15% off your next order', description: 'Use it on anything from Northline Studio. Redeem with Dripp points.', code: 'DRIPP-NORTHLINE-15', discountPct: 15, pointsCost: 300, expiresAt: Date.now() + 14 * 86_400_000 },
+  { dealId: 'sd2', brandSlug: 'sample', brandName: 'Northline Studio', title: 'Free repair or alteration', description: 'Keep a piece going instead of replacing it.', code: 'DRIPP-NORTHLINE-FIX', discountPct: 0, pointsCost: 500, expiresAt: Date.now() + 30 * 86_400_000 },
 ];
 
 /** Built-in products for fixture mode (no backend). */
@@ -135,12 +135,12 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   logo: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.ink, alignItems: 'center', justifyContent: 'center' },
   logoText: { color: Colors.background, fontWeight: '700', fontSize: 15 },
-  brandName: { flex: 1, fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink },
+  brandName: { flex: 1, fontFamily: Fonts.heading, fontSize: 20, color: Colors.ink },
   whopTag: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: Spacing.two, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: Colors.accentSoft },
   whopTagText: { fontSize: 11, fontWeight: '700', color: Colors.accent },
   deal: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.line, padding: Spacing.four, gap: Spacing.two },
   dealTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  dealTitle: { flex: 1, fontFamily: Fonts.serif, fontSize: 18, color: Colors.ink },
+  dealTitle: { flex: 1, fontFamily: Fonts.heading, fontSize: 18, color: Colors.ink },
   body: { fontSize: 14, lineHeight: 20, color: Colors.inkSoft },
   meta: { fontSize: 12, color: Colors.muted },
   products: { gap: Spacing.two, marginTop: Spacing.one, marginHorizontal: -Spacing.four },

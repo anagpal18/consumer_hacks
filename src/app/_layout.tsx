@@ -1,5 +1,9 @@
+import { Syne_700Bold } from '@expo-google-fonts/syne/700Bold';
+import { Syne_800ExtraBold } from '@expo-google-fonts/syne/800ExtraBold';
 import { Asset } from 'expo-asset';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
@@ -7,11 +11,22 @@ import { Colors, Fonts } from '@/constants/theme';
 import { DataProvider } from '@/data';
 import { BODY_TYPES } from '@/mirror/assets';
 
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({ Syne_700Bold, Syne_800ExtraBold });
+  const fontsReady = fontsLoaded || !!fontError;
+
   // Preload every onboarding mannequin so the mirror opens without a download wait.
   useEffect(() => {
     Asset.loadAsync(BODY_TYPES.map((b) => b.asset)).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (fontsReady) SplashScreen.hideAsync().catch(() => undefined);
+  }, [fontsReady]);
+
+  if (!fontsReady) return null;
 
   return (
     <DataProvider>
@@ -21,7 +36,7 @@ export default function RootLayout() {
           headerStyle: { backgroundColor: Colors.background },
           headerShadowVisible: false,
           headerTintColor: Colors.ink,
-          headerTitleStyle: { fontFamily: Fonts.serif },
+          headerTitleStyle: { fontFamily: Fonts.heading },
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: Colors.background },
         }}>

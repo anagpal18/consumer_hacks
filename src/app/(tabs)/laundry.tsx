@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.four, gap: Spacing.four },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.line, padding: Spacing.four, gap: Spacing.three },
-  heading: { fontFamily: Fonts.serif, fontSize: 20, color: Colors.ink },
+  heading: { fontFamily: Fonts.heading, fontSize: 20, color: Colors.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   grow: { flex: 1, gap: 2 },
   name: { fontSize: 15, fontWeight: '600', color: Colors.ink },

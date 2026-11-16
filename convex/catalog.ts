@@ -93,8 +93,8 @@ function rng(seed: number) {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const dealDescription = (brand: string) => `Use it on anything from ${brand}. Redeem with Wear Again points.`;
-const dealCode = (slug: string, pct: number) => `WEAR-${slug.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 8)}-${pct || "FIX"}`;
+const dealDescription = (brand: string) => `Use it on anything from ${brand}. Redeem with Dripp points.`;
+const dealCode = (slug: string, pct: number) => `DRIPP-${slug.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 8)}-${pct || "FIX"}`;
 
 /** Rewrites existing deals' description and code to the current wording. Keeps ids, titles and discounts. */
 export const refreshDealCopy = internalMutation({
