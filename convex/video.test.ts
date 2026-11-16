@@ -6,7 +6,7 @@ import { Jimp } from "jimp";
 import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
-import { MIN_GAP_MS, pickFrames, type FrameScore } from "./video";
+import { frameBudget, MIN_GAP_MS, pickFrames, type FrameScore } from "./video";
 
 const modules = import.meta.glob("./**/*.ts");
 const fixture = (name: string) => readFileSync(new URL(`../fixtures/${name}`, import.meta.url));
@@ -73,6 +73,13 @@ describe("video.extractFrames", () => {
     const big = await store(t, new Uint8Array(51 * 1024 * 1024), "video/mp4");
     expect(await errorCode(t.action(internal.video.extractFrames, { videoStorageId: big }))).toBe("VIDEO_TOO_LARGE");
   });
+});
+
+test("frameBudget asks for about one frame per second beyond 10 s, capped at 16", () => {
+  expect(frameBudget(5_000)).toBe(10);
+  expect(frameBudget(12_400)).toBe(12);
+  expect(frameBudget(15_040)).toBe(15);
+  expect(frameBudget(60_000)).toBe(16);
 });
 
 describe("pickFrames", () => {

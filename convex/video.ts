@@ -107,6 +107,10 @@ export function pickFrames(scores: FrameScore[], maxFrames: number, durationMs: 
   return chosen.sort((a, b) => a.timestampMs - b.timestampMs);
 }
 
+export function frameBudget(durationMs: number) {
+  return Math.min(16, Math.max(DEFAULT_MAX_FRAMES, Math.round(durationMs / 1000)));
+}
+
 function parseDurationMs(stderr: string) {
   const m = /Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderr);
   return m ? Math.round((Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) * 1000) : null;
@@ -115,10 +119,9 @@ function parseDurationMs(stderr: string) {
 export async function extractFramesFromVideo(
   ctx: ActionCtx,
   videoStorageId: Id<"_storage">,
-  maxFrames = DEFAULT_MAX_FRAMES,
+  maxFrames?: number,
 ): Promise<VideoFrame[]> {
   const started = Date.now();
-  const limit = Math.max(1, Math.min(16, Math.round(maxFrames)));
   const blob = await ctx.storage.get(videoStorageId);
   if (!blob) videoError("BAD_VIDEO", "The uploaded clip was not found. Upload it again.");
   if (blob.size > MAX_CLIP_BYTES) videoError("VIDEO_TOO_LARGE", "The clip is larger than 50 MB. Record a shorter clip.");
@@ -162,6 +165,7 @@ export async function extractFramesFromVideo(
       videoError("TOO_DARK", "The clip was too dark to read. Try again near a window.", true);
     }
 
+    const limit = Math.max(1, Math.min(16, Math.round(maxFrames ?? frameBudget(durationMs))));
     const picked = pickFrames(scores, limit, durationMs);
     const scale = `scale='min(${FRAME_MAX_SIDE},iw)':'min(${FRAME_MAX_SIDE},ih)':force_original_aspect_ratio=decrease,format=yuvj420p`;
     const frames: VideoFrame[] = [];
