@@ -3,18 +3,20 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, GarmentThumb, MockBadge, Pill } from '@/components/ui';
+import { Button, GarmentThumb, Pill } from '@/components/ui';
+import { BuyButton, Price, RedeemCode } from '@/components/whop';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { addToCloset, useGaps, useProductPicks, type Gap } from '@/data/catalog';
 import { useCloset } from '@/data/hooks';
 import { IS_FIXTURE_MODE } from '@/data/mode';
+import { useAppliedCodes, useWhopCheckout } from '@/lib/whop';
 import { setSession } from '@/state/session';
 
 /** SAMPLE recommendation, used in fixture mode. No partner catalog or checkout is connected. */
 const SAMPLE_PRODUCT = {
   name: 'Camel wool overcoat',
   colorHex: '#B88A55',
-  price: '$180',
+  priceCents: 18000,
   pairsWith: ['bottom', 'shoes', 'top'],
   prompt: 'a cold evening out in a camel overcoat',
 };
@@ -32,14 +34,15 @@ const SAMPLE_GAPS: Gap[] = [
   },
 ];
 
-const money = (cents: number) => '$' + Math.round(cents / 100);
-
+/** For you: closet gaps and picks, each a catalog piece you can add to your closet or buy with Whop (with a redeemed brand code). */
 export default function SuggestionsScreen() {
   const closet = useCloset();
   const picks = useProductPicks(12);
   const liveGaps = useGaps();
   const gaps = IS_FIXTURE_MODE ? SAMPLE_GAPS : liveGaps;
   const [owned, setOwned] = useState<Record<string, boolean>>({});
+  const checkout = useWhopCheckout();
+  const codes = useAppliedCodes();
 
   const add = (productId: string) => {
     if (owned[productId]) return;
@@ -59,9 +62,10 @@ export default function SuggestionsScreen() {
         id: p.productId,
         name: p.name,
         brand: p.brandName,
+        brandSlug: p.brandSlug,
         colorHex: p.colorHex,
         imageUrl: p.imageUrl ?? null,
-        price: money(p.priceCents),
+        priceCents: p.priceCents,
         prompt: p.prompt,
         matchCount: p.matchCount,
         matches: p.matches.map((m) => ({ id: m.itemId, name: m.name, colorHex: m.colorHex ?? undefined, category: m.category, wearCount: m.wearCount, media: { url: m.photoUrl ?? null } })),
@@ -71,9 +75,10 @@ export default function SuggestionsScreen() {
           id: 'sample',
           name: SAMPLE_PRODUCT.name,
           brand: 'Dripp picks',
+          brandSlug: '',
           colorHex: SAMPLE_PRODUCT.colorHex,
           imageUrl: null as string | null,
-          price: SAMPLE_PRODUCT.price,
+          priceCents: SAMPLE_PRODUCT.priceCents,
           prompt: SAMPLE_PRODUCT.prompt,
           matchCount: fallbackMatches.length,
           matches: fallbackMatches.map((m) => ({ id: m.itemId, name: m.name, colorHex: m.colorHex, category: m.category, wearCount: m.wearCount, media: m.media })),
@@ -82,8 +87,6 @@ export default function SuggestionsScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <MockBadge label="Sample suggestions, no checkout" />
-
       {gaps && gaps.length > 0 ? (
         <View style={styles.gaps} testID="shop-gaps">
           <Text style={styles.gapsTitle}>Your closet is missing</Text>
@@ -92,33 +95,38 @@ export default function SuggestionsScreen() {
               <Text style={styles.gapTitle}>{gap.title}</Text>
               <Text style={styles.body}>{gap.reason}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gapRow}>
-                {gap.products.map((product) => (
-                  <View key={product.productId} style={styles.gapCard} testID="shop-gap-product">
-                    {product.imageUrl ? (
-                      <Image source={{ uri: product.imageUrl }} style={styles.gapPhoto} contentFit="cover" transition={150} />
-                    ) : (
-                      <View style={[styles.gapPhoto, styles.hero, { backgroundColor: product.colorHex ?? Colors.mirror }]}>
-                        <Text style={styles.heroLabel}>PICKED FOR YOU</Text>
-                      </View>
-                    )}
-                    <Text style={styles.dealBrand}>{product.brandName}</Text>
-                    <Text style={styles.gapName} numberOfLines={2}>{product.name}</Text>
-                    <Text style={styles.price}>{money(product.priceCents)}</Text>
-                    <Text style={styles.dealMeta}>Goes with {product.pairsWithCount} of your pieces</Text>
-                    <Button
-                      label={owned[product.productId] ? 'In closet' : 'Add to closet'}
-                      icon={owned[product.productId] ? 'checkmark' : 'add'}
-                      variant={owned[product.productId] ? 'secondary' : 'primary'}
-                      compact
-                      disabled={owned[product.productId]}
-                      onPress={() => add(product.productId)}
-                    />
-                  </View>
-                ))}
+                {gap.products.map((product) => {
+                  const code = codes.forBrand(product.brandSlug);
+                  return (
+                    <View key={product.productId} style={styles.gapCard} testID="shop-gap-product">
+                      {product.imageUrl ? (
+                        <Image source={{ uri: product.imageUrl }} style={styles.gapPhoto} contentFit="cover" transition={150} />
+                      ) : (
+                        <View style={[styles.gapPhoto, styles.hero, { backgroundColor: product.colorHex ?? Colors.mirror }]}>
+                          <Text style={styles.heroLabel}>PICKED FOR YOU</Text>
+                        </View>
+                      )}
+                      <Text style={styles.dealBrand}>{product.brandName}</Text>
+                      <Text style={styles.gapName} numberOfLines={2}>{product.name}</Text>
+                      <Price cents={product.priceCents} pct={code?.discountPct} />
+                      <Text style={styles.dealMeta}>Goes with {product.pairsWithCount} of your pieces</Text>
+                      <BuyButton checkout={checkout} productId={product.productId} name={product.name} code={code?.code} testID="gap-buy" />
+                      <Button
+                        label={owned[product.productId] ? 'In closet' : 'Add to closet'}
+                        icon={owned[product.productId] ? 'checkmark' : 'add'}
+                        variant="secondary"
+                        compact
+                        disabled={owned[product.productId]}
+                        onPress={() => add(product.productId)}
+                      />
+                      {product.brandSlug ? <RedeemCode scope={{ productId: product.productId }} brandSlug={product.brandSlug} label="Have a code?" compact testID="gap-redeem" /> : null}
+                    </View>
+                  );
+                })}
               </ScrollView>
             </View>
           ))}
-          <Text style={styles.note}>Adding copies the piece into your closet; nothing is bought.</Text>
+          <Text style={styles.note}>Add to closet copies the piece into your closet. Buy opens Whop checkout.</Text>
         </View>
       ) : null}
 
@@ -134,9 +142,11 @@ export default function SuggestionsScreen() {
           )}
           <View style={styles.row}>
             <Text style={styles.name}>{card.name}</Text>
-            <Text style={styles.price}>{card.price}</Text>
+            <Price cents={card.priceCents} pct={codes.forBrand(card.brandSlug)?.discountPct} />
           </View>
           <Pill label={card.brand} />
+          <BuyButton checkout={checkout} productId={card.id} name={card.name} code={codes.forBrand(card.brandSlug)?.code} testID="pick-buy" />
+          {card.brandSlug ? <RedeemCode scope={{ productId: card.id }} brandSlug={card.brandSlug} label="Have a code?" compact testID="pick-redeem" /> : null}
 
           <Text style={styles.heading}>Why this fits your closet</Text>
           {card.matches.length === 0 ? (

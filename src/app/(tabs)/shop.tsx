@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui';
+import { BuyButton, Price, RedeemCode } from '@/components/whop';
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useBrandProducts, useDeals, type BrandProduct, type Deal } from '@/data/catalog';
 import { IS_FIXTURE_MODE } from '@/data/mode';
-import { useWhopCheckout } from '@/lib/whop';
+import { useAppliedCodes, useWhopCheckout } from '@/lib/whop';
 
 /** Built-in deals for fixture mode (no backend). */
 const SAMPLE_DEALS: Deal[] = [
@@ -23,12 +24,10 @@ const SAMPLE_PRODUCTS: BrandProduct[] = [
 ];
 
 const daysLeft = (at: number) => Math.max(1, Math.round((at - Date.now()) / 86_400_000));
-const dollars = (cents: number) => '$' + (cents / 100).toFixed(cents % 100 ? 2 : 0);
-const afterDiscount = (cents: number, pct: number) => Math.round(cents * (1 - pct / 100));
 
 type Checkout = ReturnType<typeof useWhopCheckout>;
 
-/** Deals: brand offers, each with the brand's pieces at the deal price and a Whop checkout. */
+/** Deals: brand offers, each with the brand's pieces and a Whop checkout. A redeemed code makes Whop apply the deal's discount. */
 export default function ShopScreen() {
   const live = useDeals();
   const deals = IS_FIXTURE_MODE ? SAMPLE_DEALS : live;
@@ -40,7 +39,7 @@ export default function ShopScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <Text style={styles.intro}>Rewear what you own to earn points, then spend them with brands you like. Buy a piece at the deal price with Whop.</Text>
+      <Text style={styles.intro}>Rewear what you own to earn points, then spend them with brands you like. Redeem a deal code and Whop takes the discount off at checkout.</Text>
       {deals === null ? <ActivityIndicator style={styles.loading} color={Colors.muted} /> : null}
       {deals?.length === 0 ? <Text style={styles.muted}>No deals right now.</Text> : null}
       {[...byBrand.entries()].map(([brand, list]) => (
@@ -65,13 +64,23 @@ export default function ShopScreen() {
               <Text style={styles.meta}>
                 {deal.pointsCost} points · ends in {daysLeft(deal.expiresAt)} days
               </Text>
-              {deal.discountPct > 0 ? <DealProducts deal={deal} checkout={checkout} /> : null}
-              {revealed[deal.dealId] ? (
+              {deal.discountPct > 0 ? (
+                <>
+                  <View style={styles.codeRow}>
+                    <Text style={styles.meta}>Your code</Text>
+                    <View style={styles.code}>
+                      <Text style={styles.codeText}>{deal.code}</Text>
+                    </View>
+                  </View>
+                  <RedeemCode scope={{ dealId: deal.dealId }} brandSlug={deal.brandSlug} testID="deal-redeem" />
+                  <DealProducts deal={deal} checkout={checkout} />
+                </>
+              ) : revealed[deal.dealId] ? (
                 <View style={styles.code}>
                   <Text style={styles.codeText}>{deal.code}</Text>
                 </View>
               ) : (
-                <Button label="Redeem code" compact variant="secondary" icon="gift-outline" onPress={() => setRevealed({ ...revealed, [deal.dealId]: true })} />
+                <Button label="Show code" compact variant="secondary" icon="gift-outline" onPress={() => setRevealed({ ...revealed, [deal.dealId]: true })} />
               )}
             </View>
           ))}
@@ -84,15 +93,15 @@ export default function ShopScreen() {
 function DealProducts({ deal, checkout }: { deal: Deal; checkout: Checkout }) {
   const live = useBrandProducts(IS_FIXTURE_MODE ? '' : deal.brandSlug);
   const products = IS_FIXTURE_MODE ? SAMPLE_PRODUCTS : live;
+  const code = useAppliedCodes().forBrand(deal.brandSlug);
+  const applied = code?.dealId === deal.dealId ? code : null;
   if (products === null) return <ActivityIndicator style={styles.loading} color={Colors.muted} />;
   if (!products.length) return null;
   return (
     <View style={styles.products}>
-      <Text style={styles.productsTitle}>Shop {deal.brandName} at {deal.discountPct}% off</Text>
+      <Text style={styles.productsTitle}>{applied ? `Shop ${deal.brandName} at ${deal.discountPct}% off` : `Shop ${deal.brandName}`}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productRow}>
         {products.map((p) => {
-          const pending = checkout.isPending(p.productId, deal.dealId);
-          const error = checkout.errorFor(p.productId, deal.dealId);
           return (
             <View key={p.productId} style={styles.product} testID="deal-product">
               {p.imageUrl ? (
@@ -101,22 +110,8 @@ function DealProducts({ deal, checkout }: { deal: Deal; checkout: Checkout }) {
                 <View style={[styles.productImage, { backgroundColor: p.colorHex }]} />
               )}
               <Text style={styles.productName} numberOfLines={2}>{p.name}</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>{dollars(afterDiscount(p.priceCents, deal.discountPct))}</Text>
-                <Text style={styles.was}>{dollars(p.priceCents)}</Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={'Buy ' + p.name + ' with Whop'}
-                accessibilityState={{ busy: pending, disabled: checkout.busy }}
-                disabled={checkout.busy}
-                onPress={() => checkout.buy(p.productId, deal.dealId)}
-                style={({ pressed }) => [styles.buy, (pressed || pending) && styles.buyPressed, checkout.busy && !pending && styles.buyIdle]}
-                testID="deal-buy">
-                {pending ? <ActivityIndicator size="small" color={Colors.onAccent} /> : <Ionicons name="bag-handle" size={14} color={Colors.onAccent} />}
-                <Text style={styles.buyText}>{pending ? 'Opening Whop…' : 'Buy with Whop'}</Text>
-              </Pressable>
-              {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
+              <Price cents={p.priceCents} pct={applied?.discountPct ?? 0} />
+              <BuyButton checkout={checkout} productId={p.productId} name={p.name} dealId={deal.dealId} code={applied?.code} testID="deal-buy" style={styles.buyGap} />
             </View>
           );
         })}
@@ -149,14 +144,8 @@ const styles = StyleSheet.create({
   product: { width: 150, gap: 4 },
   productImage: { width: 150, height: 188, borderRadius: Radius.md, backgroundColor: Colors.surfaceSunken },
   productName: { fontSize: 13, lineHeight: 17, color: Colors.ink, minHeight: 34 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  price: { fontSize: 15, fontWeight: '700', color: Colors.accent },
-  was: { fontSize: 12, color: Colors.muted, textDecorationLine: 'line-through' },
-  buy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 34, borderRadius: Radius.pill, backgroundColor: Colors.ink, marginTop: 2 },
-  buyPressed: { opacity: 0.8 },
-  buyIdle: { opacity: 0.45 },
-  buyText: { fontSize: 13, fontWeight: '700', color: Colors.onAccent },
-  error: { fontSize: 12, lineHeight: 16, color: Colors.danger },
+  buyGap: { marginTop: 2 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   code: { alignSelf: 'flex-start', paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: Colors.accent },
   codeText: { fontSize: 15, fontWeight: '700', letterSpacing: 1, color: Colors.accent },
 });
