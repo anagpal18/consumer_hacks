@@ -634,3 +634,50 @@ export const gaps = query({
   },
 });
 
+
+/** Plans by dress level, so a post's caption matches how formal its look actually is. */
+const PLANS_BY_LEVEL: [string, string][][] = [
+  [
+    ["Saturday coffee run", "weekend coffee with friends"],
+    ["Rainy day errands", "running errands on a rainy day"],
+    ["Airport outfit, long flight", "a comfortable outfit for a long flight"],
+    ["Sunday farmers market", "a sunny morning at the farmers market"],
+    ["Hike, then lunch in town", "a light hike and lunch in town"],
+    ["Brunch, then a long walk", "brunch and a long walk"],
+  ],
+  [
+    ["Work from a cafe", "working from a cafe all day"],
+    ["Museum afternoon", "an afternoon at the museum"],
+    ["Concert night", "a concert with friends tonight"],
+    ["Rooftop drinks at sunset", "rooftop drinks at sunset"],
+    ["First date, wine bar", "a first date at a wine bar"],
+    ["Job interview, creative studio", "a job interview at a creative studio"],
+  ],
+  [
+    ["Smart casual for the office", "a smart casual day at the office"],
+    ["Dinner with the in-laws", "dinner with the in-laws"],
+    ["Birthday dinner", "a birthday dinner at a nice restaurant"],
+    ["Gallery opening, then dinner", "dinner after a gallery opening"],
+    ["Monday, back to it", "an ordinary Monday at work"],
+    ["Winter wedding guest", "being a guest at a winter wedding"],
+  ],
+];
+
+/** Re-captions feed posts from their pieces' formality. Keeps post ids, likes and products. */
+export const recaptionPosts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let n = 0;
+    for (const post of await ctx.db.query("feedPosts").take(500)) {
+      const products = (await Promise.all((post.productIds ?? []).map((id) => ctx.db.get(id)))).filter((p): p is Doc<"products"> => !!p);
+      if (!products.length) continue;
+      const avg = products.reduce((s, p) => s + traits(p).formality, 0) / products.length;
+      const level = avg < 2.3 ? 0 : avg < 3.2 ? 1 : 2;
+      const list = PLANS_BY_LEVEL[level];
+      const [caption, prompt] = list[post.rank % list.length];
+      await ctx.db.patch("feedPosts", post._id, { caption, prompt });
+      n++;
+    }
+    return { recaptioned: n };
+  },
+});
