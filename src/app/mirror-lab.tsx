@@ -4,12 +4,14 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Mirror } from '@/components/Mirror';
 import { Colors, Radius, Spacing } from '@/constants/theme';
+import { AVATARS } from '@/mirror/assets';
 import { BodyControls } from '@/mirror/BodyControls';
 import {
   SAMPLE_AVATAR,
   SAMPLE_AVATAR_BODY,
   SAMPLE_AVATAR_ESTIMATE_RESULT,
   type AvatarBody,
+  type AvatarRef,
   type MirrorGarment,
   type MirrorState,
   type MirrorViewerControls,
@@ -20,21 +22,26 @@ import {
  * Flips the shoes slot to show that only that mesh swaps, exercises the tint
  * fallback and the viewer controls, and edits the body live with BodyControls.
  */
-const SHOES = { sneakers: 'demo/sneakers-white', boots: 'demo/boots-brown' } as const;
+const SHOES = { sneakers: 'demo/sneakers-white', boots: 'demo/boots-brown', canvas: 'avaturn/sneakers-blue' } as const;
+const SHOE_LABELS = { sneakers: 'White sneakers', boots: 'Brown leather boots', canvas: 'Blue canvas sneakers' } as const;
+const MY_AVATAR: AvatarRef = { kind: 'preset', key: 'kenil' };
 
 export default function MirrorLab() {
   const [shoes, setShoes] = useState<keyof typeof SHOES>('sneakers');
   const [tint, setTint] = useState(false);
+  const [mine, setMine] = useState(false);
   const [body, setBody] = useState<AvatarBody>(SAMPLE_AVATAR_BODY);
   const [state, setState] = useState<MirrorState>({ status: 'loading' });
   const [controls, setControls] = useState<MirrorViewerControls | null>(null);
 
-  const keys = ['demo/jacket-denim', 'demo/shirt-white', 'demo/trousers-charcoal', SHOES[shoes]];
+  const outfit = ['demo/jacket-denim', 'demo/shirt-white', 'demo/trousers-charcoal', SHOES[shoes]];
+  // My avatar only wears the garments refitted to it so far.
+  const keys = mine ? outfit.filter((k) => k in AVATARS.kenil.garments) : outfit;
   const garments: MirrorGarment[] | undefined = tint
     ? [
         { slot: 'top', renderAssetKey: 'demo/shirt-white', label: 'White oxford shirt' },
         { slot: 'bottom', colorHex: '#B49A72', label: 'Khaki chinos' },
-        { slot: 'shoes', renderAssetKey: SHOES[shoes], label: shoes === 'boots' ? 'Brown leather boots' : 'White sneakers' },
+        { slot: 'shoes', renderAssetKey: SHOES[shoes], label: SHOE_LABELS[shoes] },
       ]
     : undefined;
 
@@ -43,7 +50,7 @@ export default function MirrorLab() {
       <Stack.Screen options={{ title: 'Mirror lab (dev)' }} />
       <View style={styles.mirror}>
         <Mirror
-          avatar={{ ...SAMPLE_AVATAR, body }}
+          avatar={mine ? MY_AVATAR : { ...SAMPLE_AVATAR, body }}
           garmentAssetKeys={keys}
           garments={garments}
           onStateChange={setState}
@@ -56,6 +63,11 @@ export default function MirrorLab() {
           {state.status === 'error' ? ' - ' + state.message : ''}
         </Text>
         <View style={styles.row}>
+          <Chip label="Demo body" active={!mine} onPress={() => setMine(false)} />
+          <Chip label="My avatar" active={mine} onPress={() => setMine(true)} />
+        </View>
+        <View style={styles.row}>
+          <Chip label="Canvas" active={shoes === 'canvas'} onPress={() => setShoes('canvas')} />
           <Chip label="Sneakers" active={shoes === 'sneakers'} onPress={() => setShoes('sneakers')} />
           <Chip label="Boots" active={shoes === 'boots'} onPress={() => setShoes('boots')} />
           <Chip label="Chinos (tint)" active={tint} onPress={() => setTint((t) => !t)} />
@@ -71,7 +83,7 @@ export default function MirrorLab() {
           <Chip label="Sample estimate" onPress={() => setBody(SAMPLE_AVATAR_ESTIMATE_RESULT.body)} />
           <Chip label="Reset body" onPress={() => setBody(SAMPLE_AVATAR_BODY)} />
         </View>
-        <BodyControls value={body} onChange={setBody} />
+        {!mine && <BodyControls value={body} onChange={setBody} />}
       </ScrollView>
     </View>
   );

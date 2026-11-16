@@ -8,7 +8,7 @@
  * item's colorHex and labels it approximate.
  *
  * Key format: "<namespace>/<garment>-<color>", lowercase kebab-case, for example
- * "demo/sneakers-white". "demo/" is the bundled demo set. Keys are stable ids:
+ * "demo/sneakers-white". "demo/" is the bundled demo set; "avaturn/" came with an Avaturn avatar. Keys are stable ids:
  * never reuse a key for a different mesh. The app side (src/mirror/assets.ts)
  * adds the GLB file for each key.
  */
@@ -37,6 +37,7 @@ export const RENDER_ASSETS: readonly RenderAssetMeta[] = [
   { key: 'demo/trousers-charcoal', slot: 'bottom', category: 'bottom', subtypes: ['trousers', 'suit trousers', 'dress pants', 'slacks'], colorFamily: 'grey' },
   { key: 'demo/sneakers-white', slot: 'shoes', category: 'shoes', subtypes: ['sneakers', 'trainers', 'running shoes'], colorFamily: 'white' },
   { key: 'demo/boots-brown', slot: 'shoes', category: 'shoes', subtypes: ['boots', 'leather boots', 'chelsea boots', 'derby shoes', 'leather shoes'], colorFamily: 'brown' },
+  { key: 'avaturn/sneakers-blue', slot: 'shoes', category: 'shoes', subtypes: ['sneakers', 'canvas sneakers', 'skate shoes'], colorFamily: 'blue' },
 ];
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,17 @@ so garments keep fitting. Packed with gltfpack (MIT). See README.md.
 | sneakers-white.glb | `shoes05` (white sneakers) | MakeHuman team | CC0 1.0 | MakeHuman system assets (as above) |
 | boots-brown.glb | `shoes01` (brown leather lace-up shoes). Approximation: no CC0/CC-BY brown boot mesh was reachable, so the app labels it approximate | MakeHuman team | CC0 1.0 | MakeHuman system assets (as above) |
 
+## kenil/ (Kenil's own avatar)
+
+Kenil's personal likeness, made with Avaturn (avaturn.me) and shared by him for this
+app only. Not open-licensed: do not reuse, publish or copy these files outside this repo.
+
+| File | Content |
+| --- | --- |
+| kenil/avatar.glb | Avaturn body and hair (`avaturn_body`, `avaturn_hair_0`), arms posed down from the T-pose to the demo body's arm angle, baked static; hair texture darkened (Avaturn ships it grey for tinting) |
+| kenil/sneakers-blue.glb | Avaturn's `avaturn_shoes_0`, same pose |
+| kenil/sneakers-white.glb, kenil/boots-brown.glb | The demo `shoes05` and `shoes01` meshes above (CC0), refitted to his feet |
+
 three.js (MIT, https://github.com/mrdoob/three.js) is bundled into
 src/mirror/viewerHtml.generated.ts by mirror-viewer/build.js.
 
