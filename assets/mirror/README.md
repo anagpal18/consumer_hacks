@@ -58,9 +58,11 @@ KENIL=/path/to/avaturn-exports MH_GLB=/path/to/unpacked-demo-glbs OUT=$PWD/out \
   blender -b --python assets/mirror/pipeline/fit_kenil.py
 ```
 
-It poses his arms down to the demo arm angle, fits shoes per foot by box, and moves the
-other garments with a smoothed displacement field from the demo body to his surface.
-It then pushes anything left inside his body out, and bakes the same hide masks.
+It poses his arms (lowered, swung and bent at the elbow) to overlap the demo body's arms,
+fits shoes per foot by a uniform scale, and moves the other garments with a smoothed
+displacement field from the demo body to his surface (normal rays, same-facing surfaces only).
+It then pushes anything left inside his body out, sinks inner layers under outer ones by
+height above his skin, and bakes the same hide masks.
 Pack each output with gltfpack as above.
 
 The viewer page itself lives in mirror-viewer/ and is bundled with

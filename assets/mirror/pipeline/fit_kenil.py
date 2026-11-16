@@ -79,27 +79,48 @@ mh_fx = forearm_x(mbv * ((1.84) / (mbv[:, 2].max())))
 print('MH angles', math.degrees(mh_arm), math.degrees(mh_leg), 'height', mbv[:, 2].max(), flush=True)
 
 # 2. Kenil: body from model-body, hair and Avaturn shoes from model-look, posed to the MH angles.
-def pose(arm, da, dl):
+def pose(arm, lower, flex, bend):
+    """From rest: lower the arms (about Y at the shoulder), swing them forward (about X), bend the elbows (about X)."""
     bpy.context.view_layer.objects.active = arm
     bpy.ops.object.mode_set(mode='POSE')
-    for bone, ang in (('LeftArm', da), ('RightArm', -da), ('LeftUpLeg', -dl), ('RightUpLeg', dl)):
-        pb = arm.pose.bones[bone]
-        M = pb.matrix.copy(); h = M.translation.copy()
-        pb.matrix = Matrix.Translation(h) @ Matrix.Rotation(ang, 4, 'Y') @ Matrix.Translation(-h) @ M
-        bpy.context.view_layer.update()
+    for pb in arm.pose.bones:
+        pb.matrix_basis = Matrix()
+    bpy.context.view_layer.update()
+    for side, sign in (('Left', 1), ('Right', -1)):
+        for bone, ang, axis in (('Arm', sign * lower, 'Y'), ('Arm', flex, 'X'), ('ForeArm', bend, 'X')):
+            pb = arm.pose.bones[side + bone]
+            M = pb.matrix.copy(); h = M.translation.copy()
+            pb.matrix = Matrix.Translation(h) @ Matrix.Rotation(ang, 4, axis) @ Matrix.Translation(-h) @ M
+            bpy.context.view_layer.update()
     bpy.ops.object.mode_set(mode='OBJECT')
 
 kb = imported(K + '/model-body.glb')
 kl = imported(K + '/model-look.glb')
 kbody = next(o for o in kb if o.name.startswith('avaturn_body'))
 arms = [next(o for o in objs if o.type == 'ARMATURE') for objs in (kb, kl)]
-da, dl = math.radians(80), 0.0  # legs stay as modeled: his stance is close and posing them crosses the thighs
-for it in range(3):
-    for a in arms: pose(a, da, dl)
-    tmp = bake(kbody, 'tmp'); tv = V(tmp); ka, kleg = angles(tv); kx = forearm_x(tv); bpy.data.objects.remove(tmp, do_unlink=True)
-    print('K angles after pass', it, math.degrees(ka), 'forearm x', kx, 'MH', mh_fx, flush=True)
-    # Lower (or raise) the arm so the forearm lands where the demo body's forearm is.
-    da, dl = (kx - mh_fx) / 0.75, 0.0
+# The demo body stands with elbows bent and hands forward. Pose Kenil's arms to overlap its arms
+# (grid search on the mean distance from the demo arm surface to his body), so sleeves map arm to arm.
+mh_arm_pts = mbv[(np.abs(mbv[:, 0]) > 0.22) & (mbv[:, 2] > 0.72) & (mbv[:, 2] < 1.4)] * (1.84 / mbv[:, 2].max())
+def arm_cost(params):
+    pose(arms[0], *params)
+    tmp = bake(kbody, 'tmp')
+    bm = bmesh.new(); bm.from_mesh(tmp.data); t = BVHTree.FromBMesh(bm); bm.free()
+    bpy.data.objects.remove(tmp, do_unlink=True)
+    return float(np.mean([t.find_nearest(Vector(p))[3] for p in mh_arm_pts[::3]]))
+best = None
+for lower in np.radians([70, 75, 80, 85]):
+    for flex in np.radians([-25, -15, -5, 5]):
+        for bend in np.radians([-90, -75, -60, -45, -30, -15]):
+            c = arm_cost((lower, flex, bend))
+            if best is None or c < best[0]: best = (c, (lower, flex, bend))
+c0, (lower, flex, bend) = best
+for dl_ in np.radians([-2.5, 0, 2.5]):
+    for df in np.radians([-5, 0, 5]):
+        for db in np.radians([-7.5, 0, 7.5]):
+            c = arm_cost((lower + dl_, flex + df, bend + db))
+            if c < best[0]: best = (c, (lower + dl_, flex + df, bend + db))
+print('arm pose', [round(math.degrees(x), 1) for x in best[1]], 'mean dist', best[0], flush=True)
+for a_ in arms: pose(a_, *best[1])
 k = {'body': bake(kbody, 'kenil_body')}
 for o in kl:
     if o.name.startswith('avaturn_hair'): k['hair'] = bake(o, 'kenil_hair')
@@ -162,10 +183,20 @@ for _ in range(int(os.environ.get('SMOOTH', '25'))):
 mtree = bvh(mbody)
 tris = [tuple(p.vertices) for p in mbody.data.polygons]
 from mathutils.geometry import barycentric_transform
+def bind(p, n):
+    """Demo-body point under a garment vertex: along its normal, on a surface facing the same way."""
+    best = None
+    for d in (-n, n):
+        hit = mtree.ray_cast(p, d, 0.08)
+        if hit[0] is not None and hit[1].dot(n) > 0.3 and (best is None or hit[3] < best[3]): best = hit
+    return best if best is not None else mtree.find_nearest(p)
+
 def moved(o, off):
     gv = V(o); out = np.empty_like(gv)
+    o.data.update()
+    gn = np.empty(len(gv) * 3); o.data.vertices.foreach_get('normal', gn); gn = gn.reshape(-1, 3)
     for i, p in enumerate(gv):
-        loc, _, fi, _ = mtree.find_nearest(Vector(p))
+        loc, mn, fi, _ = bind(Vector(p), Vector(gn[i]))
         f = tris[fi]
         if len(f) == 3:
             a, b, c = (mbv[j] for j in f)
@@ -176,7 +207,7 @@ def moved(o, off):
         q = p + d
         kl_, kn, _, _ = ktree.find_nearest(Vector(q))
         kn = Vector(kn); sd = (Vector(q) - kl_).dot(kn)
-        if sd < off:
+        if sd < off and kn.dot(mn) > 0.3:
             q = np.array(kl_ + kn * off)
         out[i] = q
     setV(o, out)
@@ -209,19 +240,34 @@ for g in GARMENTS:
     moved(mh[g['file']], g['off'])
     print('FIT', g['file'], flush=True)
 
-def push_out(o, under, gap):
-    t = bvh(under); gv = V(o)
-    for i, p in enumerate(gv):
-        loc, n, _, dist = t.find_nearest(Vector(p))
-        if dist is None or dist > 0.1: continue
-        sd = (Vector(p) - loc).dot(n)
-        if sd < gap: gv[i] = np.array(loc + n * gap)
-    setV(o, gv)
-for top, unders in (('trousers-charcoal', ['shirt-white', 'tee-black']),
-                    ('jacket-denim', ['shirt-white', 'tee-black', 'trousers-charcoal'])):
-    for u in unders:
-        push_out(mh[top], mh[u], 0.008)
-    print('LAYERED', top, flush=True)
+from mathutils.kdtree import KDTree
+def heights(pts):
+    """Height of each point above his skin, and the skin normal there."""
+    h = np.empty(len(pts)); n = np.empty_like(pts)
+    for i, p in enumerate(pts):
+        loc, kn, _, _ = ktree.find_nearest(Vector(p))
+        h[i] = (Vector(p) - loc).dot(kn); n[i] = kn
+    return h, n
+def tuck_under(under, over, gap=0.012, reach=0.05, floor=0.002):
+    """Where the over garment covers the under one, sink the under garment below it (measured from his skin)."""
+    ov = V(over); oh, _ = heights(ov)
+    kd = KDTree(len(ov))
+    for i, p in enumerate(ov): kd.insert(Vector(p), i)
+    kd.balance()
+    uv = V(under); uh, un = heights(uv)
+    for i, p in enumerate(uv):
+        near = kd.find_range(Vector(p), reach)
+        if not near: continue
+        limit = max(floor, min(oh[j] for _, j, _ in near) - gap)
+        if uh[i] > limit:
+            uv[i] = p - un[i] * (uh[i] - limit)
+    setV(under, uv)
+for under, over in (('shirt-white', 'jacket-denim'), ('tee-black', 'jacket-denim'), ('trousers-charcoal', 'jacket-denim'),
+                    ('shirt-white', 'trousers-charcoal'), ('tee-black', 'trousers-charcoal'),
+                    ('sneakers-white', 'trousers-charcoal'), ('boots-brown', 'trousers-charcoal')):
+    # A tucked top sits deep under the waistband, or its hem shows through it.
+    tuck_under(mh[under], mh[over], **({'gap': 0.015, 'reach': 0.08} if over == 'trousers-charcoal' and under in ('shirt-white', 'tee-black') else {}))
+    print('TUCKED', under, 'under', over, flush=True)
 
 # 4. Hide masks, as in build_avatar.py: a vertex is covered by a garment when a short ray
 # along its normal (or against it) hits the garment.

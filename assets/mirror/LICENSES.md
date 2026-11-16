@@ -22,9 +22,11 @@ app only. Not open-licensed: do not reuse, publish or copy these files outside t
 
 | File | Content |
 | --- | --- |
-| kenil/avatar.glb | Avaturn body and hair (`avaturn_body`, `avaturn_hair_0`), arms posed down from the T-pose to the demo body's arm angle, baked static; hair texture darkened (Avaturn ships it grey for tinting) |
+| kenil/avatar.glb | Avaturn body and hair (`avaturn_body`, `avaturn_hair_0`), arms posed from the T-pose to the demo body's arm pose, baked static; hair texture darkened (Avaturn ships it grey for tinting) |
 | kenil/sneakers-blue.glb | Avaturn's `avaturn_shoes_0`, same pose |
+| kenil/look.glb | Avaturn's `avaturn_look_0` (jacket, tee and joggers in one mesh), same pose |
 | kenil/sneakers-white.glb, kenil/boots-brown.glb | The demo `shoes05` and `shoes01` meshes above (CC0), refitted to his feet |
+| kenil/jacket-denim.glb, kenil/shirt-white.glb, kenil/tee-black.glb, kenil/trousers-charcoal.glb | The demo garments above, refitted to his body; same authors and licenses as the demo files (the jacket and trousers keep their CC BY attribution) |
 
 three.js (MIT, https://github.com/mrdoob/three.js) is bundled into
 src/mirror/viewerHtml.generated.ts by mirror-viewer/build.js.
