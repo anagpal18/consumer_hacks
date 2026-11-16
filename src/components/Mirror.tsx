@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, DRESSED_AVATARS, MIRROR_ASSETS, PREFERRED_AVATAR_KEY, TINT_TEMPLATES } from '@/mirror/assets';
+import { AVATAR_ASSETS, DEFAULT_AVATAR_KEY, DRESSED_AVATARS, isMannequin, MIRROR_ASSETS, PREFERRED_AVATAR_KEY, TINT_TEMPLATES } from '@/mirror/assets';
 import { loadAssetSource } from '@/mirror/loadAsset';
 import { MirrorSurface, type MirrorSurfaceHandle } from '@/mirror/MirrorSurface';
 import type { HostMessage, ViewerGarment, ViewerMessage } from '@/mirror/protocol';
@@ -51,7 +51,11 @@ export function Mirror({ avatar, garmentAssetKeys, garments, onStateChange, onCo
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<MirrorState>({ status: 'loading' });
 
-  const avatarKey = avatar.demo || !AVATAR_ASSETS[avatar.key] ? (AVATAR_ASSETS[PREFERRED_AVATAR_KEY] ? PREFERRED_AVATAR_KEY : DEFAULT_AVATAR_KEY) : avatar.key;
+  const avatarKey = isMannequin(avatar.key)
+    ? DEFAULT_AVATAR_KEY
+    : avatar.demo || !AVATAR_ASSETS[avatar.key]
+      ? (AVATAR_ASSETS[PREFERRED_AVATAR_KEY] ? PREFERRED_AVATAR_KEY : DEFAULT_AVATAR_KEY)
+      : avatar.key;
   const dressed = DRESSED_AVATARS.has(avatarKey);
   const keysSignature = garmentAssetKeys.join('|');
   const garmentsSignature = JSON.stringify(garments ?? null);

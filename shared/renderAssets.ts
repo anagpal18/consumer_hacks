@@ -44,4 +44,7 @@ export const RENDER_ASSETS: readonly RenderAssetMeta[] = [
   { key: 'demo/shirt-lightblue', slot: 'top', category: 'top', subtypes: ['dress shirt', 'oxford shirt', 'button-down shirt', 'button-up shirt', 'long-sleeve shirt', 'shirt'], colorFamily: 'blue', pattern: 'solid' },
   { key: 'demo/flannel-navy-plaid', slot: 'top', category: 'top', subtypes: ['flannel shirt', 'flannel', 'plaid shirt', 'checked shirt', 'button-up shirt', 'shirt'], colorFamily: 'blue', pattern: 'plaid' },
   { key: 'demo/jeans-darkwash', slot: 'bottom', category: 'bottom', subtypes: ['jeans', 'denim jeans', 'denim pants', 'straight jeans', 'slim jeans'], colorFamily: 'blue', pattern: 'denim' },
+  { key: 'demo/blazer-tan-check', slot: 'outerwear', category: 'outerwear', subtypes: ['blazer', 'check blazer', 'windowpane blazer', 'suit jacket', 'sport coat', 'sports jacket'], colorFamily: 'beige', pattern: 'check' },
+  { key: 'demo/tee-beige', slot: 'top', category: 'top', subtypes: ['t-shirt', 'tee', 'crew neck t-shirt', 'crew-neck t-shirt', 'crewneck tee'], colorFamily: 'beige', pattern: 'solid' },
+  { key: 'demo/pants-khaki-drawstring', slot: 'bottom', category: 'bottom', subtypes: ['drawstring pants', 'pants', 'chinos', 'trousers', 'joggers', 'cargo pants'], colorFamily: 'beige', pattern: 'solid' },
 ];
