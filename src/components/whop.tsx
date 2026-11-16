@@ -80,12 +80,19 @@ export function RedeemCode({ scope, brandSlug, label = 'Redeem code', compact, t
     return (
       <View style={styles.applied} testID={testID + '-applied'}>
         <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
-        <Text style={styles.appliedText} numberOfLines={2}>
-          <Text style={styles.appliedCode}>{applied.code}</Text> · {applied.discountPct}% off {applied.brandName}
-        </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={'Remove code ' + applied.code} hitSlop={8} onPress={() => codes.remove(brandSlug)}>
-          <Text style={styles.remove}>Remove</Text>
-        </Pressable>
+        <View style={styles.appliedBody}>
+          <Text style={styles.appliedCode} numberOfLines={1}>
+            {applied.code}
+          </Text>
+          <View style={styles.appliedLine}>
+            <Text style={styles.appliedText}>
+              {applied.discountPct}% off {applied.brandName}
+            </Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={'Remove code ' + applied.code} hitSlop={8} onPress={() => codes.remove(brandSlug)}>
+              <Text style={styles.remove}>Remove</Text>
+            </Pressable>
+          </View>
+        </View>
       </View>
     );
   }
@@ -115,7 +122,7 @@ export function RedeemCode({ scope, brandSlug, label = 'Redeem code', compact, t
 
   return (
     <View style={styles.form} testID={testID + '-form'}>
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, compact && styles.inputStack]}>
         <TextInput
           value={text}
           onChangeText={(value) => {
@@ -130,7 +137,7 @@ export function RedeemCode({ scope, brandSlug, label = 'Redeem code', compact, t
           autoFocus
           returnKeyType="done"
           accessibilityLabel="Code"
-          style={[styles.input, error && styles.inputError]}
+          style={[styles.input, !compact && styles.inputGrow, error && styles.inputError]}
           testID={testID + '-input'}
         />
         <Pressable
@@ -169,9 +176,9 @@ const styles = StyleSheet.create({
   link: { fontSize: 13, fontWeight: '600', color: Colors.accent },
   form: { gap: 6 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  inputStack: { flexDirection: 'column', alignItems: 'stretch' },
+  inputGrow: { flex: 1, minWidth: 0 },
   input: {
-    flex: 1,
-    minWidth: 0,
     height: 38,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.sm,
@@ -187,7 +194,9 @@ const styles = StyleSheet.create({
   apply: { height: 38, minWidth: 68, paddingHorizontal: Spacing.three, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accent },
   applyText: { fontSize: 13, fontWeight: '700', color: Colors.onAccent },
   applied: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.two, paddingVertical: 6, borderRadius: Radius.sm, backgroundColor: Colors.successSoft },
-  appliedText: { flex: 1, fontSize: 13, color: Colors.success },
-  appliedCode: { fontWeight: '700', letterSpacing: 0.5 },
+  appliedBody: { flex: 1, minWidth: 0, gap: 1 },
+  appliedLine: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: Spacing.two },
+  appliedText: { fontSize: 12, color: Colors.success },
+  appliedCode: { fontSize: 13, fontWeight: '700', color: Colors.success },
   remove: { fontSize: 12, fontWeight: '600', color: Colors.inkSoft, textDecorationLine: 'underline' },
 });
