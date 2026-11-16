@@ -40,3 +40,21 @@ export const deleteScan = mutation({
     return { deleted: true as const, scanId: scan._id, deletedCandidates, deletedFiles, keptItemPhotos: keptPhotos.size };
   },
 });
+
+export const deleteBodyPhoto = mutation({
+  args: { closetCode: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await requireProfile(ctx, args.closetCode);
+    let deletedFiles = 0;
+    for await (const media of ctx.db.query("media").withIndex("by_ownerId", (q) => q.eq("ownerId", profile._id))) {
+      if (media.kind !== "body") continue;
+      await ctx.db.delete("media", media._id);
+      if (await ctx.db.system.get("_storage", media.storageId)) {
+        await ctx.storage.delete(media.storageId);
+        deletedFiles++;
+      }
+    }
+    await ctx.db.patch("profiles", profile._id, { bodyPhotoStorageId: undefined });
+    return { deleted: true as const, deletedFiles };
+  },
+});

@@ -46,16 +46,37 @@ export const scanError = v.object({
   retryable: v.boolean(),
 });
 
+export const bodyEstimate = v.object({
+  body: v.object({
+    sex: v.string(),
+    preset: v.string(),
+    skinTone: v.union(v.string(), v.null()),
+    heightCm: v.optional(v.number()),
+    proportions: v.object({
+      head: v.number(),
+      chest: v.number(),
+      arms: v.number(),
+      waist: v.number(),
+      hips: v.number(),
+      shoulders: v.number(),
+    }),
+  }),
+  confidence: v.number(),
+  notes: v.string(),
+});
+
 export default defineSchema({
   profiles: defineTable({
     closetCode: v.string(),
     displayName: v.optional(v.string()),
+    bodyPhotoStorageId: v.optional(v.id("_storage")),
+    bodyEstimate: v.optional(bodyEstimate),
   }).index("by_closetCode", ["closetCode"]),
 
   media: defineTable({
     ownerId: v.id("profiles"),
     storageId: v.id("_storage"),
-    kind: v.union(v.literal("frame"), v.literal("clip"), v.literal("crop"), v.literal("photo")),
+    kind: v.union(v.literal("frame"), v.literal("clip"), v.literal("crop"), v.literal("photo"), v.literal("body")),
     contentType: v.optional(v.string()),
     size: v.optional(v.number()),
   })
